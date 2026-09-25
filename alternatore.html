@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Alternatore — dalla spira rotante alla tensione alternata</title>
+<style>
+:root{
+  --panel:#E6E8E4; --panel-2:#F2F3F0; --ink:#14181A; --dim:#5D6669; --rule:#C6CAC5;
+  --screen:#0D1317; --bezel:#2A3238;
+  --copper:#C07A3E; --pos:#C43A2C; --neg:#2F62AD;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --panel:#15181A; --panel-2:#1E2225; --ink:#E9EBE8; --dim:#98A1A4; --rule:#333A3D;
+    --pos:#E0574A; --neg:#5A8FE0;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:#15181A; --panel-2:#1E2225; --ink:#E9EBE8; --dim:#98A1A4; --rule:#333A3D;
+  --pos:#E0574A; --neg:#5A8FE0;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--panel);color:var(--ink);
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:16px;line-height:1.55;
+}
+.wrap{max-width:1160px;margin:0 auto;padding:22px 16px 72px}
+
+h1{font-size:clamp(26px,4.6vw,38px);font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.05}
+.lede{margin:6px 0 0;max-width:62ch;color:var(--dim)}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}
+
+button{font:500 15px/1 system-ui,sans-serif;border:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:9px 14px;border-radius:2px;cursor:pointer}
+button:hover{background:var(--ink);color:var(--panel)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+.run{min-width:104px}
+
+.bench{border:1px solid var(--rule);background:var(--rule);display:grid;gap:1px;
+  grid-template-columns:minmax(0,1.32fr) minmax(0,1fr)}
+.screen{position:relative;background:var(--screen);height:clamp(300px,40vw,430px);min-width:0}
+.screen canvas{display:block;width:100%;height:100%}
+.screen figcaption{position:absolute;left:12px;top:10px;font-size:12px;color:#7F919B;letter-spacing:.01em}
+
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+  border:1px solid var(--rule);border-top:0;background:var(--panel-2)}
+.ro{padding:10px 13px;border-left:1px solid var(--rule)}
+.ro:first-child{border-left:0}
+.ro b{display:block;font:500 21px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.ro span{display:block;font-size:12px;color:var(--dim);margin-top:3px}
+.ro.hl b{color:var(--copper)}
+
+.calc{border:1px solid var(--rule);border-top:0;background:var(--panel-2);padding:11px 13px;
+  font:400 13px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);overflow-x:auto;white-space:nowrap}
+.calc b{color:var(--ink);font-weight:500}
+
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));
+  border:1px solid var(--rule);border-top:0}
+.ctrl{padding:12px 14px;border-left:1px solid var(--rule)}
+.ctrl:first-child{border-left:0}
+.ctrl label{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--dim);margin-bottom:7px}
+.ctrl label var{font:500 13px/1 ui-monospace,Menlo,monospace;font-style:normal;color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--copper);margin:0}
+select{font:400 14px system-ui,sans-serif;width:100%;padding:6px 8px;border:1px solid var(--rule);
+  background:var(--panel);color:var(--ink);border-radius:2px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:4px}
+.chk input{accent-color:var(--copper);width:17px;height:17px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.presets button{font-size:13px;padding:7px 10px}
+
+h2{font-size:21px;font-weight:600;letter-spacing:-.01em;margin:44px 0 10px}
+.prose{max-width:68ch}
+.prose p{margin:0 0 12px}
+.notes{border-top:1px solid var(--rule);margin-top:6px}
+.note{display:grid;grid-template-columns:22px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--rule);max-width:78ch}
+.note i{font-style:normal;font:500 13px/1.7 ui-monospace,Menlo,monospace;color:var(--copper)}
+.note p{margin:0}
+.note strong{font-weight:600}
+
+.eq{font:500 15px/2 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel-2);
+  border:1px solid var(--rule);padding:12px 15px;overflow-x:auto;margin:14px 0 0}
+
+.step{display:grid;grid-template-columns:24px 1fr;gap:14px;padding:18px 0;border-top:1px solid var(--rule)}
+.step>i{font-style:normal;font:500 14px/1.6 ui-monospace,Menlo,monospace;color:var(--copper)}
+.step h3{margin:0 0 4px;font-size:16px;font-weight:600}
+.step p{margin:0 0 10px;color:var(--dim);font-size:14.5px;max-width:66ch}
+.code{position:relative;background:var(--screen);border-radius:2px}
+.code pre{margin:0;padding:14px 15px;overflow-x:auto;color:#D6E1E6;
+  font:400 13px/1.85 ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-user-select:text;user-select:text}
+.code button{position:absolute;top:8px;right:8px;font-size:12px;padding:5px 9px;border-color:#42535C;color:#9FB3BC;background:rgba(13,19,23,.8)}
+.code button:hover{background:#D6E1E6;color:var(--screen);border-color:#D6E1E6}
+.tip{font-size:14px;color:var(--dim);max-width:68ch}
+footer{margin-top:46px;padding-top:16px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--dim);max-width:70ch}
+
+@media (max-width:820px){
+  .bench{grid-template-columns:1fr}
+  .screen{height:clamp(270px,62vw,360px)}
+  #scope-screen{height:clamp(200px,44vw,260px)}
+  .ctrl{border-left:0;border-top:1px solid var(--rule)}
+  .ctrl:first-child{border-top:0}
+  .ro{border-left:0;border-top:1px solid var(--rule)}
+  .ro:nth-child(1),.ro:nth-child(2){border-top:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <h1>Alternatore</h1>
+      <p class="lede">Una spira ruota dentro un campo magnetico: il flusso concatenato cambia in continuazione e ai morsetti nasce una tensione sinusoidale.</p>
+    </div>
+    <button id="run" class="run" aria-pressed="true">Pausa</button>
+  </div>
+
+  <div class="bench">
+    <figure class="screen" style="margin:0">
+      <canvas id="machine"></canvas>
+      <figcaption>macchina</figcaption>
+    </figure>
+    <figure class="screen" id="scope-screen" style="margin:0">
+      <canvas id="scope"></canvas>
+      <figcaption>tensione ai morsetti</figcaption>
+    </figure>
+  </div>
+
+  <div class="readouts">
+    <div class="ro hl"><b id="r-v">—</b><span>v istantanea (V)</span></div>
+    <div class="ro"><b id="r-vmax">—</b><span>V max (V)</span></div>
+    <div class="ro"><b id="r-veff">—</b><span>V efficace (V)</span></div>
+    <div class="ro"><b id="r-f">—</b><span>frequenza (Hz)</span></div>
+    <div class="ro"><b id="r-T">—</b><span>periodo</span></div>
+    <div class="ro"><b id="r-th">—</b><span>angolo θ</span></div>
+    <div class="ro"><b id="r-phi">—</b><span>flusso Φ</span></div>
+  </div>
+
+  <div class="calc">
+    v = N · B · A · ω · sen θ<br><b id="calc">—</b>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label for="c-n">giri al minuto <var id="v-n">60</var></label>
+      <input id="c-n" type="range" min="0" max="3000" step="10" value="60">
+    </div>
+    <div class="ctrl">
+      <label for="c-B">campo B (T) <var id="v-B">0,80</var></label>
+      <input id="c-B" type="range" min="0" max="1.5" step="0.05" value="0.8">
+    </div>
+    <div class="ctrl">
+      <label for="c-N">numero di spire <var id="v-N">50</var></label>
+      <input id="c-N" type="range" min="1" max="200" step="1" value="50">
+    </div>
+    <div class="ctrl">
+      <label for="c-A">area spira (m²) <var id="v-A">0,030</var></label>
+      <input id="c-A" type="range" min="0.005" max="0.1" step="0.005" value="0.03">
+    </div>
+    <div class="ctrl">
+      <label for="c-slow">moviola</label>
+      <select id="c-slow">
+        <option value="1">tempo reale</option>
+        <option value="0.1">10 volte più lento</option>
+        <option value="0.01">100 volte più lento</option>
+        <option value="0.001">1000 volte più lento</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>tracce in più</label>
+      <div class="chk"><input type="checkbox" id="c-flux"><label for="c-flux" style="margin:0;color:var(--ink)">flusso Φ</label></div>
+      <div class="chk"><input type="checkbox" id="c-tri"><label for="c-tri" style="margin:0;color:var(--ink)">le tre fasi</label></div>
+    </div>
+    <div class="ctrl">
+      <label>impostazioni pronte</label>
+      <div class="presets">
+        <button id="p-didattico">Didattica, 1 Hz</button>
+        <button id="p-rete">Rete, 230 V · 50 Hz</button>
+        <button id="p-reset">Azzera il tempo</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>Da far notare in aula</h2>
+  <div class="notes">
+    <div class="note"><i>1</i><p>La tensione è <strong>massima quando il piano della spira è parallelo al campo</strong>, cioè proprio dove il flusso concatenato vale zero. Conta la rapidità con cui il flusso cambia, non quanto flusso c'è: è il punto che in classe si ribalta sempre.</p></div>
+    <div class="note"><i>2</i><p>Un giro completo della spira produce un periodo intero: una semionda positiva e una negativa. Con una sola coppia polare servono <strong>3000 giri/min per fare 50 Hz</strong> — è il legame f = p · n / 60.</p></div>
+    <div class="note"><i>3</i><p>I due <strong>anelli con le spazzole</strong> lasciano uscire la corrente così com'è, alternata. Sostituendoli con un collettore a lamelle si ribalta la semionda negativa e la macchina diventa una dinamo, con tensione continua pulsante.</p></div>
+    <div class="note"><i>4</i><p>Con il preset della rete si vede che <strong>230 V efficaci corrispondono a circa 325 V di picco</strong>: il rapporto è √2 e vale per qualunque sinusoide, non solo per i 230 V.</p></div>
+    <div class="note"><i>5</i><p>B, spire, area e velocità cambiano solo <strong>l'altezza</strong> della sinusoide. La frequenza dipende solo dai giri e dal numero di poli: è il motivo per cui i gruppi elettrogeni devono girare a velocità costante.</p></div>
+  </div>
+
+  <div class="eq">
+v = N · B · A · ω · sen θ        ω = 2π n / 60        θ = ω t
+V max = N · B · A · ω            V eff = V max / √2 = 0,707 · V max
+Φ = N · B · A · cos θ            f = p · n / 60        T = 1 / f
+  </div>
+
+  <h2>Rifarla dentro GeoGebra</h2>
+  <div class="prose">
+    <p class="tip">Questa pagina funziona da sola su qualsiasi iPad, ma se serve la versione GeoGebra (per GeoGebra Classroom o per farla costruire agli allievi) bastano quattro blocchi di comandi da incollare nella barra di inserimento di GeoGebra Classic. Se l'app crea un solo oggetto per blocco, si incolla una riga alla volta.</p>
+  </div>
+
+  <div class="step">
+    <i>1</i>
+    <div>
+      <h3>Cursori e grandezze elettriche</h3>
+      <p>Crea i quattro parametri della macchina più il tempo. Dopo averli creati, imposta i valori di partenza: n = 30, B = 0,8, N = 50, A = 0,03.</p>
+      <div class="code"><button data-copy="gg1">Copia</button><pre id="gg1">n = Cursore(0, 120, 1)
+B = Cursore(0, 1.5, 0.05)
+N = Cursore(1, 200, 1)
+A = Cursore(0.005, 0.1, 0.005)
+t = Cursore(0, 10, 0.02)
+ω = 2π n / 60
+θ = ω t
+Φ = N B A cos(θ)
+V_max = N B A ω
+V_eff = V_max / sqrt(2)
+v = V_max sin(θ)</pre></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <i>2</i>
+    <div>
+      <h3>La spira vista in prospettiva</h3>
+      <p>I quattro vertici sono la proiezione di un rettangolo che ruota attorno a un asse verticale, visto da 20° più in alto. Quando il piano è parallelo al campo la spira si vede di taglio.</p>
+      <div class="code"><button data-copy="gg2">Copia</button><pre id="gg2">O = (-4, 0)
+β = θ + 90°
+P_1 = O + (1.6cos(β), 1.1cos(20°) + 1.6sin(β) sin(20°))
+P_2 = O + (1.6cos(β), -1.1cos(20°) + 1.6sin(β) sin(20°))
+P_3 = O + (-1.6cos(β), -1.1cos(20°) - 1.6sin(β) sin(20°))
+P_4 = O + (-1.6cos(β), 1.1cos(20°) - 1.6sin(β) sin(20°))
+spira = Poligono(P_1, P_2, P_3, P_4)</pre></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <i>3</i>
+    <div>
+      <h3>Campo magnetico, asse e normale</h3>
+      <p>Il campo è una serie di vettori orizzontali da N verso S. Il vettore <em>normale</em> è la perpendicolare al piano della spira: l'angolo fra normale e campo è proprio θ, quello che compare nel coseno del flusso.</p>
+      <div class="code"><button data-copy="gg3">Copia</button><pre id="gg3">campo = Sequenza(Vettore((-6.6, k), (-1.4, k)), k, -1.6, 1.6, 0.8)
+normale = Vettore(O, O + 1.5(cos(θ), sin(θ) sin(20°)))
+asse = Segmento(O - (0, 2.3), O + (0, 2.3))</pre></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <i>4</i>
+    <div>
+      <h3>Sinusoide e letture</h3>
+      <p>Il cursore k_V serve solo a comprimere la curva in verticale, perché in volt uscirebbe fuori schermo. Il punto Q va acceso con «Traccia attiva» per disegnare l'onda mentre la spira gira.</p>
+      <div class="code"><button data-copy="gg4">Copia</button><pre id="gg4">k_V = Cursore(0.01, 2, 0.01)
+g = Funzione(k_V V_max sin(ω x), 0, 10)
+Q = (t, k_V v)
+testo1 = Testo("θ = " + Arrotonda(θ 180 / π) + "°", (-6.6, 2.6))
+testo2 = Testo("v = " + Arrotonda(v, 1) + " V", (0.4, 2.6))
+testo3 = Testo("V max = " + Arrotonda(V_max, 1) + " V", (0.4, 2.2))</pre></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <i>5</i>
+    <div>
+      <h3>Avviare l'animazione</h3>
+      <p>Tasto destro sul cursore t (oppure tocco prolungato su iPad) → Impostazioni → Cursore → Animazione attiva, ripetizione «Crescente». Da lì si regola anche la velocità. Infine si allarga la vista trascinando, fino a vedere sia la macchina sia la sinusoide: serve una finestra da circa −7 a 11 in orizzontale.</p>
+    </div>
+  </div>
+
+  <footer>
+    I comandi GeoGebra qui sopra non li ho potuti provare dentro l'app: se qualche riga restituisce errore basta segnalarmela e la correggo. La simulazione in alto invece gira per conto suo, anche offline una volta aperta la pagina.
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var M = document.getElementById('machine');
+var SC = document.getElementById('scope');
+
+var st = {
+  run: true, t: 0, th: 0,
+  n: 60, B: 0.8, N: 50, A: 0.03,
+  slow: 1, flux: false, tri: false
+};
+
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) st.run = false;
+
+var hist = [];
+
+function omega(){ return 2*Math.PI*st.n/60; }
+function vmax(){ return st.N*st.B*st.A*omega(); }
+function pmax(){ return st.N*st.B*st.A; }
+function volt(){ return vmax()*Math.sin(st.th); }
+function freq(){ return st.n/60; }
+function win(){ var f = freq(); return f > 0.0001 ? Math.min(4/f, 20) : 4; }
+
+/* ---------- numeri in italiano ---------- */
+function nf(x, d){
+  if (!isFinite(x)) x = 0;
+  return x.toLocaleString('it-IT', {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+
+/* ---------- canvas ---------- */
+function fit(cv){
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var r = cv.getBoundingClientRect();
+  var w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  }
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:ctx, w:w, h:h};
+}
+
+/* ---------- proiezione assonometrica ---------- */
+var ALPHA = 20*Math.PI/180, GAMMA = 26*Math.PI/180;
+var ca = Math.cos(ALPHA), sa = Math.sin(ALPHA);
+var cg = Math.cos(GAMMA), sg = Math.sin(GAMMA);
+var cx = 0, cy = 0, S = 40;
+
+function P(x,y,z){
+  var X =  x*cg + z*sg;
+  var Z = -x*sg + z*cg;
+  return [cx + X*S, cy - (y*ca - Z*sa)*S];
+}
+
+function quad(ctx,a,b,c,d,fill,stroke,lw){
+  ctx.beginPath();
+  ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.lineTo(c[0],c[1]); ctx.lineTo(d[0],d[1]);
+  ctx.closePath();
+  if(fill){ ctx.fillStyle = fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = lw||1; ctx.stroke(); }
+}
+
+function head(ctx, from, to, size, col){
+  var dx = to[0]-from[0], dy = to[1]-from[1];
+  var L = Math.sqrt(dx*dx+dy*dy) || 1;
+  var ux = dx/L, uy = dy/L, px = -uy, py = ux;
+  ctx.beginPath();
+  ctx.moveTo(to[0], to[1]);
+  ctx.lineTo(to[0]-ux*size+px*size*0.46, to[1]-uy*size+py*size*0.46);
+  ctx.lineTo(to[0]-ux*size-px*size*0.46, to[1]-uy*size-py*size*0.46);
+  ctx.closePath();
+  ctx.fillStyle = col; ctx.fill();
+}
+
+/* ---------- la macchina ---------- */
+function drawMachine(){
+  var f = fit(M), ctx = f.ctx, w = f.w, h = f.h;
+  ctx.fillStyle = '#0D1317'; ctx.fillRect(0,0,w,h);
+
+  S  = Math.min(w/10.8, h/7.2);
+  cx = w*0.41; cy = h*0.42;
+
+  var th = st.th, b = th + Math.PI/2;
+  var sinT = Math.sin(th);
+  var L = 1.55, H = 1.02;
+
+  /* campo magnetico */
+  var rows = [-1.7,-0.85,0,0.85,1.7], depths = [-1.35, 1.35];
+  ctx.lineWidth = 1;
+  for (var di=0; di<depths.length; di++){
+    for (var ri=0; ri<rows.length; ri++){
+      var a = P(-3.35, rows[ri], depths[di]), c = P(3.35, rows[ri], depths[di]);
+      ctx.strokeStyle = di===1 ? 'rgba(122,158,176,0.34)' : 'rgba(122,158,176,0.17)';
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke();
+      var fr = [0.2,0.55,0.86];
+      for (var k=0;k<fr.length;k++){
+        var pt = [a[0]+(c[0]-a[0])*fr[k], a[1]+(c[1]-a[1])*fr[k]];
+        head(ctx, a, pt, S*0.17, di===1 ? 'rgba(122,158,176,0.5)' : 'rgba(122,158,176,0.24)');
+      }
+    }
+  }
+
+  /* espansioni polari */
+  pole(ctx, -4.25, -3.5, '#B23A2E', '#D6574A', 'N');
+  pole(ctx,  3.5,  4.25, '#2A579B', '#4479C8', 'S');
+
+  /* albero, anelli, spazzole, circuito */
+  shaft(ctx, H);
+  meter(ctx, w, h);
+
+  /* riferimento dell'angolo + arco + normale */
+  var o0 = P(0,0,0), ox = P(1.75,0,0);
+  ctx.setLineDash([3,4]); ctx.strokeStyle = 'rgba(150,180,195,0.45)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(o0[0],o0[1]); ctx.lineTo(ox[0],ox[1]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  var thm = ((th % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  ctx.beginPath();
+  for (var s=0; s<=44; s++){
+    var aa = thm*s/44, pt2 = P(0.78*Math.cos(aa), 0, -0.78*Math.sin(aa));
+    if (s===0) ctx.moveTo(pt2[0],pt2[1]); else ctx.lineTo(pt2[0],pt2[1]);
+  }
+  ctx.strokeStyle = 'rgba(214,225,230,0.6)'; ctx.lineWidth = 1.4; ctx.stroke();
+  var mid = P(0.95*Math.cos(thm/2), 0, -0.95*Math.sin(thm/2));
+  ctx.fillStyle = '#C9D7DD'; ctx.font = '500 13px ui-monospace, Menlo, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('θ', mid[0], mid[1]);
+
+  /* la spira */
+  function corner(u,v){ return P(u*L*Math.cos(b), v*H, -u*L*Math.sin(b)); }
+  var p1 = corner(1,1), p2 = corner(1,-1), p3 = corner(-1,-1), p4 = corner(-1,1);
+  quad(ctx, p1,p2,p3,p4, 'rgba(192,122,62,0.14)', 'rgba(192,122,62,0.5)', 1);
+
+  for (var g=-1; g<=1; g++){
+    if (g===0) continue;
+    var q1 = P(L*Math.cos(b), H+g*0.05, -L*Math.sin(b));
+    var q2 = P(L*Math.cos(b), -H+g*0.05, -L*Math.sin(b));
+    var q3 = P(-L*Math.cos(b), -H+g*0.05, L*Math.sin(b));
+    var q4 = P(-L*Math.cos(b), H+g*0.05, L*Math.sin(b));
+    quad(ctx, q1,q2,q3,q4, null, 'rgba(192,122,62,0.3)', 1);
+  }
+
+  var sides = [{u:1, z:-L*Math.cos(th)}, {u:-1, z:L*Math.cos(th)}];
+  sides.sort(function(A,Bb){ return A.z - Bb.z; });
+  for (var i2=0; i2<sides.length; i2++){
+    var u = sides[i2].u, far = i2===0;
+    var top = corner(u,1), bot = corner(u,-1);
+    ctx.strokeStyle = far ? '#8C5B31' : '#D08B4C';
+    ctx.lineWidth = far ? 4 : 5.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(top[0],top[1]); ctx.lineTo(bot[0],bot[1]); ctx.stroke();
+
+    var amp = Math.abs(sinT);
+    if (amp > 0.04){
+      var up = (u*sinT) > 0;
+      var from = up ? bot : top, to = up ? top : bot;
+      var mx = (from[0]+to[0])/2, my = (from[1]+to[1])/2;
+      var tipx = mx + (to[0]-from[0])*0.22, tipy = my + (to[1]-from[1])*0.22;
+      ctx.globalAlpha = 0.25 + 0.75*amp;
+      head(ctx, [mx,my], [tipx,tipy], S*0.26, far ? '#F0C089' : '#FFDDAE');
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.lineCap = 'butt';
+
+  /* normale alla spira */
+  var nA = P(0,0,0), nB = P(1.45*Math.cos(th), 0, -1.45*Math.sin(th));
+  ctx.strokeStyle = '#8FD3C4'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(nA[0],nA[1]); ctx.lineTo(nB[0],nB[1]); ctx.stroke();
+  head(ctx, nA, nB, S*0.2, '#8FD3C4');
+  ctx.fillStyle = '#8FD3C4'; ctx.font = '400 11px system-ui, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('normale', nB[0]+7, nB[1]-2);
+
+  /* etichetta del campo */
+  var bl = P(-2.4, 2.25, 1.35);
+  ctx.fillStyle = 'rgba(160,195,212,0.85)'; ctx.font = '500 13px ui-monospace, Menlo, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('B', bl[0], bl[1]);
+}
+
+function pole(ctx, x0, x1, dark, light, name){
+  var y0 = -2.25, y1 = 2.25, z0 = -1.75, z1 = 1.75;
+  var inner = (x0 < 0) ? x1 : x0;
+  quad(ctx, P(x0,y1,z1), P(x1,y1,z1), P(x1,y1,z0), P(x0,y1,z0), light, null);
+  quad(ctx, P(x0,y1,z1), P(x1,y1,z1), P(x1,y0,z1), P(x0,y0,z1), dark, null);
+  quad(ctx, P(inner,y1,z1), P(inner,y1,z0), P(inner,y0,z0), P(inner,y0,z1), light, null);
+  var c = P(inner, 0, 0);
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.font = '700 22px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(name, c[0] + (x0<0 ? -S*0.42 : S*0.42), c[1]);
+}
+
+var BRUSH = [null,null];
+function shaft(ctx, H){
+  var a = P(0,-H,0), b = P(0,-3.05,0);
+  ctx.strokeStyle = '#6E7C84'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+
+  var ys = [-2.2, -2.8], r = 0.44;
+  for (var i=0;i<2;i++){
+    var top = P(0, ys[i]+0.09, 0), bot = P(0, ys[i]-0.09, 0);
+    ctx.fillStyle = '#7D8B93';
+    ctx.fillRect(top[0]-r*S, top[1], 2*r*S, bot[1]-top[1]);
+    ctx.beginPath(); ctx.ellipse(bot[0], bot[1], r*S, r*S*sa, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#6A777E'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(top[0], top[1], r*S, r*S*sa, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#9CAAB1'; ctx.fill();
+    ctx.strokeStyle = '#4C585E'; ctx.lineWidth = 1; ctx.stroke();
+
+    var bx = top[0] + (i===0 ? -r*S : r*S);
+    var by = (top[1]+bot[1])/2;
+    ctx.fillStyle = '#2E373C';
+    ctx.fillRect(bx + (i===0 ? -S*0.24 : 0), by - S*0.1, S*0.24, S*0.2);
+    BRUSH[i] = [bx + (i===0 ? -S*0.24 : S*0.24), by];
+  }
+}
+
+function meter(ctx, w, h){
+  var R  = Math.min(w,h)*0.135;
+  var mx = w - R*1.55, my = h - R*1.35;
+  ctx.fillStyle = '#151E24'; ctx.strokeStyle = '#33434C'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(mx-R*1.2, my-R*1.05, R*2.4, R*1.85); ctx.fill(); ctx.stroke();
+
+  var piv = [mx, my + R*0.5];
+  ctx.strokeStyle = 'rgba(150,180,195,0.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(piv[0], piv[1], R*0.92, -Math.PI*0.82, -Math.PI*0.18); ctx.stroke();
+  for (var k=-3;k<=3;k++){
+    var a0 = -Math.PI/2 + k*0.2;
+    var r1 = R*0.92, r2 = R*(k===0 ? 0.74 : 0.82);
+    ctx.beginPath();
+    ctx.moveTo(piv[0]+Math.cos(a0)*r1, piv[1]+Math.sin(a0)*r1);
+    ctx.lineTo(piv[0]+Math.cos(a0)*r2, piv[1]+Math.sin(a0)*r2);
+    ctx.strokeStyle = k===0 ? 'rgba(214,225,230,0.7)' : 'rgba(150,180,195,0.4)';
+    ctx.stroke();
+  }
+
+  var vm = vmax(), rel = vm > 0 ? Math.max(-1, Math.min(1, volt()/vm)) : 0;
+  var ang = -Math.PI/2 + rel*0.62;
+  ctx.strokeStyle = rel >= 0 ? '#E0574A' : '#5A8FE0';
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(piv[0], piv[1]);
+  ctx.lineTo(piv[0]+Math.cos(ang)*R*0.86, piv[1]+Math.sin(ang)*R*0.86); ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.arc(piv[0], piv[1], 2.4, 0, Math.PI*2);
+  ctx.fillStyle = '#C9D7DD'; ctx.fill();
+
+  ctx.fillStyle = 'rgba(160,195,212,0.8)';
+  ctx.font = '400 11px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('V ∼', piv[0], my + R*0.7);
+
+  var t1 = [mx - R*0.7, my + R*0.8], t2 = [mx + R*0.7, my + R*0.8];
+  ctx.strokeStyle = '#5E6C74'; ctx.lineWidth = 1.6;
+  for (var i=0;i<2;i++){
+    var br = BRUSH[i]; if(!br) continue;
+    var tt = i===0 ? t1 : t2;
+    ctx.beginPath();
+    ctx.moveTo(br[0], br[1]);
+    ctx.lineTo(br[0] + (i===0 ? -18 : 18), br[1]);
+    ctx.lineTo(br[0] + (i===0 ? -18 : 18), tt[1]);
+    ctx.lineTo(tt[0], tt[1]);
+    ctx.stroke();
+  }
+}
+
+/* ---------- oscilloscopio ---------- */
+function drawScope(){
+  var f = fit(SC), ctx = f.ctx, w = f.w, h = f.h;
+  ctx.fillStyle = '#0D1317'; ctx.fillRect(0,0,w,h);
+
+  var padL = 14, padR = 14, padT = 26, padB = 30;
+  var x0 = padL, x1 = w - padR, y0 = padT, y1 = h - padB;
+  var zy = (y0+y1)/2, half = (y1-y0)/2;
+
+  var tw = win(), tEnd = st.t, tStart = tEnd - tw;
+  var vm = vmax(), vRef = vm;
+  for (var i=0;i<hist.length;i++) if (hist[i].vm > vRef) vRef = hist[i].vm;
+  if (vRef <= 0) vRef = 1;
+  var ky = (half*0.86)/vRef;
+
+  function X(t){ return x0 + (t - tStart)/tw*(x1-x0); }
+  function Y(v){ return zy - v*ky; }
+
+  /* griglia */
+  ctx.strokeStyle = 'rgba(140,180,200,0.10)'; ctx.lineWidth = 1;
+  for (var g=1; g<4; g++){
+    var gx = x0 + (x1-x0)*g/4;
+    ctx.beginPath(); ctx.moveTo(gx,y0); ctx.lineTo(gx,y1); ctx.stroke();
+  }
+  for (var r=-2;r<=2;r++){
+    if (r===0) continue;
+    var gy = zy - half*0.86*r/2;
+    ctx.beginPath(); ctx.moveTo(x0,gy); ctx.lineTo(x1,gy); ctx.stroke();
+  }
+
+  /* V max e V eff */
+  if (vm > 0){
+    ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(214,225,230,0.35)';
+    ctx.beginPath(); ctx.moveTo(x0, Y(vm)); ctx.lineTo(x1, Y(vm));
+    ctx.moveTo(x0, Y(-vm)); ctx.lineTo(x1, Y(-vm)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(192,122,62,0.55)';
+    ctx.beginPath(); ctx.moveTo(x0, Y(vm/Math.SQRT2)); ctx.lineTo(x1, Y(vm/Math.SQRT2));
+    ctx.moveTo(x0, Y(-vm/Math.SQRT2)); ctx.lineTo(x1, Y(-vm/Math.SQRT2)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '400 11px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(214,225,230,0.6)'; ctx.fillText('V max', x0+3, Y(vm)-2);
+    ctx.fillStyle = 'rgba(192,122,62,0.9)'; ctx.fillText('V eff', x0+3, Y(vm/Math.SQRT2)-2);
+  }
+
+  /* asse zero */
+  ctx.strokeStyle = 'rgba(214,225,230,0.38)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0,zy); ctx.lineTo(x1,zy); ctx.stroke();
+
+  if (hist.length > 1){
+    /* riempimento a semionde */
+    for (var i2=0;i2<hist.length;i2++){
+      var s = hist[i2]; if (s.t < tStart) continue;
+      var vv = s.vm*Math.sin(s.th);
+      ctx.fillStyle = vv >= 0 ? 'rgba(224,87,74,0.16)' : 'rgba(90,143,224,0.16)';
+      ctx.fillRect(X(s.t), Math.min(zy, Y(vv)), 1.4, Math.abs(Y(vv)-zy));
+    }
+    /* le altre due fasi */
+    if (st.tri){
+      var sh = [2*Math.PI/3, -2*Math.PI/3];
+      for (var q=0;q<2;q++){
+        ctx.beginPath(); var first = true;
+        for (var i3=0;i3<hist.length;i3++){
+          var s3 = hist[i3]; if (s3.t < tStart) continue;
+          var y3 = Y(s3.vm*Math.sin(s3.th + sh[q]));
+          if (first){ ctx.moveTo(X(s3.t), y3); first = false; } else ctx.lineTo(X(s3.t), y3);
+        }
+        ctx.strokeStyle = 'rgba(190,212,222,0.4)'; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+    }
+    /* flusso */
+    if (st.flux){
+      var pRef = pmax();
+      for (var i4=0;i4<hist.length;i4++) if (hist[i4].pm > pRef) pRef = hist[i4].pm;
+      if (pRef > 0){
+        ctx.setLineDash([5,4]); ctx.beginPath(); var f1 = true;
+        for (var i5=0;i5<hist.length;i5++){
+          var s5 = hist[i5]; if (s5.t < tStart) continue;
+          var yf = zy - (s5.pm*Math.cos(s5.th)/pRef)*half*0.6;
+          if (f1){ ctx.moveTo(X(s5.t), yf); f1 = false; } else ctx.lineTo(X(s5.t), yf);
+        }
+        ctx.strokeStyle = 'rgba(201,155,94,0.85)'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    /* traccia della tensione, due colori */
+    ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    var prev = null;
+    for (var i6=0;i6<hist.length;i6++){
+      var s6 = hist[i6]; if (s6.t < tStart) continue;
+      var v6 = s6.vm*Math.sin(s6.th);
+      var pt = [X(s6.t), Y(v6)];
+      if (prev){
+        ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(pt[0],pt[1]);
+        ctx.strokeStyle = (prev[2]+v6) >= 0 ? '#E0574A' : '#5A8FE0';
+        ctx.stroke();
+      }
+      prev = [pt[0], pt[1], v6];
+    }
+    if (prev){
+      ctx.beginPath(); ctx.arc(prev[0], prev[1], 3.4, 0, Math.PI*2);
+      ctx.fillStyle = prev[2] >= 0 ? '#E0574A' : '#5A8FE0'; ctx.fill();
+    }
+  }
+
+  /* misura del periodo */
+  var fr = freq();
+  if (fr > 0.0001){
+    var Tp = 1/fr, ya = y1 + 13;
+    var xa = X(tEnd - Tp), xb = X(tEnd);
+    if (xa >= x0){
+      ctx.strokeStyle = 'rgba(160,195,212,0.6)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xa,ya); ctx.lineTo(xb,ya); ctx.stroke();
+      head(ctx,[xb,ya],[xa,ya],6,'rgba(160,195,212,0.6)');
+      head(ctx,[xa,ya],[xb,ya],6,'rgba(160,195,212,0.6)');
+      ctx.fillStyle = 'rgba(160,195,212,0.9)';
+      ctx.font = '400 11px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('T = ' + fmtT(Tp), (xa+xb)/2, ya-3);
+    }
+  }
+  ctx.fillStyle = 'rgba(127,145,155,0.9)';
+  ctx.font = '400 11px system-ui, sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillText('tempo', x1, y1+6);
+}
+
+function fmtT(T){
+  if (T < 1) return nf(T*1000, 1) + ' ms';
+  return nf(T, 2) + ' s';
+}
+
+/* ---------- letture ---------- */
+var lastRead = 0;
+function readouts(now){
+  if (now - lastRead < 100) return;
+  lastRead = now;
+  var vm = vmax(), v = volt(), fr = freq();
+  var pm = pmax(), phi = pm*Math.cos(st.th);
+  var thm = ((st.th % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+
+  set('r-v', nf(v, vm >= 100 ? 0 : 1));
+  set('r-vmax', nf(vm, vm >= 100 ? 0 : 1));
+  set('r-veff', nf(vm/Math.SQRT2, vm >= 100 ? 0 : 1));
+  set('r-f', fr >= 10 ? nf(fr,0) : nf(fr,2));
+  set('r-T', fr > 0.0001 ? fmtT(1/fr) : '—');
+  set('r-th', nf(thm*180/Math.PI, 0) + '°');
+  set('r-phi', pm < 0.05 ? nf(phi*1000,1) + ' mWb' : nf(phi,3) + ' Wb');
+
+  document.getElementById('calc').textContent =
+    nf(st.N,0) + ' · ' + nf(st.B,2) + ' · ' + nf(st.A,3) + ' · ' + nf(omega(),1) +
+    ' · sen ' + nf(thm*180/Math.PI,0) + '° = ' + nf(v, vm >= 100 ? 0 : 1) + ' V';
+}
+function set(id, txt){ document.getElementById(id).textContent = txt; }
+
+/* ---------- ciclo ---------- */
+var last = performance.now();
+function frame(now){
+  var dt = (now - last)/1000; last = now;
+  if (dt > 0.1) dt = 0.1;
+  if (st.run){
+    var d = dt*st.slow;
+    var tw = win();
+    var steps = Math.max(1, Math.min(240, Math.ceil(d/(tw/150))));
+    var ds = d/steps, om = omega(), vm = vmax(), pm = pmax();
+    for (var k=0;k<steps;k++){
+      st.t += ds; st.th += om*ds;
+      hist.push({t:st.t, th:st.th, vm:vm, pm:pm});
+    }
+    while (hist.length > 2 && hist[0].t < st.t - tw*1.08) hist.shift();
+    if (hist.length > 5000) hist.splice(0, hist.length - 5000);
+  }
+  drawMachine(); drawScope(); readouts(now);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- comandi ---------- */
+var runBtn = document.getElementById('run');
+function setRun(on){
+  st.run = on;
+  runBtn.textContent = on ? 'Pausa' : 'Avvia';
+  runBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if (on) last = performance.now();
+}
+runBtn.addEventListener('click', function(){ setRun(!st.run); });
+setRun(st.run);
+
+function bind(id, key, label, dec){
+  var el = document.getElementById(id), out = document.getElementById(label);
+  function upd(){
+    st[key] = parseFloat(el.value);
+    out.textContent = nf(st[key], dec);
+  }
+  el.addEventListener('input', upd);
+  upd();
+}
+bind('c-n','n','v-n',0);
+bind('c-B','B','v-B',2);
+bind('c-N','N','v-N',0);
+bind('c-A','A','v-A',3);
+
+document.getElementById('c-slow').addEventListener('change', function(e){
+  st.slow = parseFloat(e.target.value);
+});
+document.getElementById('c-flux').addEventListener('change', function(e){ st.flux = e.target.checked; });
+document.getElementById('c-tri').addEventListener('change', function(e){ st.tri = e.target.checked; });
+
+function preset(n, B, N, A, slow){
+  document.getElementById('c-n').value = n; document.getElementById('c-B').value = B;
+  document.getElementById('c-N').value = N; document.getElementById('c-A').value = A;
+  document.getElementById('c-slow').value = String(slow);
+  st.n = n; st.B = B; st.N = N; st.A = A; st.slow = slow;
+  document.getElementById('v-n').textContent = nf(n,0);
+  document.getElementById('v-B').textContent = nf(B,2);
+  document.getElementById('v-N').textContent = nf(N,0);
+  document.getElementById('v-A').textContent = nf(A,3);
+  st.t = 0; st.th = 0; hist.length = 0; setRun(true);
+}
+document.getElementById('p-didattico').addEventListener('click', function(){ preset(60, 0.8, 50, 0.03, 1); });
+document.getElementById('p-rete').addEventListener('click', function(){ preset(3000, 0.9, 38, 0.03, 0.01); });
+document.getElementById('p-reset').addEventListener('click', function(){ st.t = 0; st.th = 0; hist.length = 0; });
+
+/* copia dei blocchi GeoGebra */
+var btns = document.querySelectorAll('[data-copy]');
+for (var i=0;i<btns.length;i++){
+  (function(btn){
+    btn.addEventListener('click', function(){
+      var txt = document.getElementById(btn.getAttribute('data-copy')).textContent;
+      var done = function(ok){
+        btn.textContent = ok ? 'Copiato' : 'Seleziona e copia';
+        setTimeout(function(){ btn.textContent = 'Copia'; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){ done(true); }, function(){ done(false); });
+      } else {
+        var sel = window.getSelection(), rng = document.createRange();
+        rng.selectNodeContents(document.getElementById(btn.getAttribute('data-copy')));
+        sel.removeAllRanges(); sel.addRange(rng);
+        done(false);
+      }
+    });
+  })(btns[i]);
+}
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
