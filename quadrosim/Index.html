@@ -1,0 +1,3473 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="QuadroSim">
+<meta name="theme-color" content="#D6D9D4">
+<meta name="description" content="Disegno e simulazione di schemi elettrici di comando e potenza, nel browser e su iPad.">
+<title>QuadroSim</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='3' y='3' width='58' height='58' rx='10' fill='%23F2B300' stroke='%232C3236' stroke-width='3'/%3E%3Crect x='27' y='8' width='10' height='48' rx='5' fill='%23C8102E' transform='rotate(90 32 32)'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23F2B300'/%3E%3Crect x='27' y='8' width='10' height='48' rx='5' fill='%23C8102E' transform='rotate(90 32 32)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* interfaccia */
+  --plate: #D6D9D4;
+  --plate-hi: #E6E8E3;
+  --plate-lo: #BCC1BA;
+  --text: #2C3236;
+  --text-2: #5A6368;
+  --btn-a: #F3F4F1;
+  --btn-b: #DDE0DA;
+  --btn-act: #CFD3CC;
+  --chip: #E9EBE7;
+  --card: #FBFBF8;
+  --field: #FFFFFF;
+  --hover: #ECEEEA;
+  --inv-bg: #2C3236;
+  --inv-fg: #FFFFFF;
+  /* foglio da disegno: resta chiaro anche nel tema scuro */
+  --paper: #FBFBF8;
+  --ink: #2C3236;
+  --ink-2: #5A6368;
+  --signal: #F2B300;
+  --live: #D62839;
+  --neu: #1D63C8;
+  --pe: #23994A;
+  --handle: #C8102E;
+  --ok: #1E8E4A;
+  --warn: #C8660A;
+  --ui: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cond: "Barlow Semi Condensed", "Barlow", "Arial Narrow", system-ui, sans-serif;
+  --pal-w: 236px;
+  --bar-h: 58px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --plate: #2B3034; --plate-hi: #343A3F; --plate-lo: #1D2124; --text: #E4E7E3; --text-2: #A7AFB3;
+    --btn-a: #3E454A; --btn-b: #33393D; --btn-act: #272C2F; --chip: #363C41; --card: #2F3539; --field: #23282B;
+    --hover: #3A4146; --inv-bg: #E4E7E3; --inv-fg: #1D2124; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --plate: #2B3034; --plate-hi: #343A3F; --plate-lo: #1D2124; --text: #E4E7E3; --text-2: #A7AFB3;
+  --btn-a: #3E454A; --btn-b: #33393D; --btn-act: #272C2F; --chip: #363C41; --card: #2F3539; --field: #23282B;
+  --hover: #3A4146; --inv-bg: #E4E7E3; --inv-fg: #1D2124; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--plate); color: var(--text); font-family: var(--ui); -webkit-text-size-adjust: 100%; }
+body { overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { touch-action: manipulation; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+#app {
+  display: grid; grid-template-rows: var(--bar-h) 1fr; grid-template-columns: var(--pal-w) 1fr;
+  height: 100vh; height: 100dvh; padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* ---------- barra superiore ---------- */
+#bar {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 10px;
+  background: linear-gradient(var(--plate-hi), var(--plate)); border-bottom: 1px solid var(--plate-lo);
+  position: relative; z-index: 5; min-width: 0;
+}
+.brand { font: 700 19px/1 var(--cond); letter-spacing: .01em; margin-right: 4px; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+.brand svg { width: 24px; height: 24px; flex: none; }
+.grp { display: flex; align-items: center; gap: 4px; }
+.sep { width: 1px; align-self: stretch; margin: 12px 3px; background: var(--plate-lo); }
+.btn {
+  height: 40px; min-width: 40px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--plate-lo);
+  background: linear-gradient(var(--btn-a), var(--btn-b)); color: var(--text); font-weight: 600; font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; white-space: nowrap;
+}
+.btn:active { background: var(--btn-act); }
+.btn[disabled] { opacity: .38; pointer-events: none; }
+.btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn.ico { padding: 0; width: 42px; }
+.btn.on { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.seg { display: flex; border: 1px solid var(--plate-lo); border-radius: 8px; overflow: hidden; background: var(--chip); }
+.seg button { height: 40px; padding: 0 12px; border: 0; background: transparent; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); }
+.seg button + button { border-left: 1px solid var(--plate-lo); }
+.seg button svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.seg button[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); }
+.spacer { flex: 1; }
+#zlab { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; color: var(--text-2); }
+#simclock { font: 600 16px var(--cond); font-variant-numeric: tabular-nums; min-width: 60px; color: var(--text-2); }
+body.sim .edit-only { display: none !important; }
+body:not(.sim) .sim-only { display: none !important; }
+
+/* interruttore generale: avvia e ferma la simulazione */
+.mainsw { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 6px 0 2px; border: 0; background: none; cursor: pointer; font-weight: 700; font-size: 15px; color: var(--text); }
+.mainsw svg { width: 46px; height: 46px; flex: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+.mainsw .hd { transform-origin: 32px 32px; transition: transform .28s cubic-bezier(.3,1.4,.5,1); }
+.mainsw[aria-pressed="true"] .hd { transform: rotate(90deg); }
+.mainsw .lab { display: flex; flex-direction: column; line-height: 1.1; text-align: left; white-space: nowrap; }
+.mainsw .lab small { font-weight: 500; font-size: 12px; color: var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .mainsw .hd { transition: none; } }
+
+/* ---------- tavolozza dei simboli ---------- */
+#pal { grid-row: 2; background: var(--plate); border-right: 1px solid var(--plate-lo); display: flex; flex-direction: column; min-height: 0; z-index: 4; transition: opacity .2s; }
+body.sim #pal { opacity: .4; pointer-events: none; }
+#palhead { display: none; align-items: center; justify-content: space-between; padding: 8px 10px 0 12px; font: 700 16px var(--cond); }
+#cats { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 10px 9px; border-bottom: 1px solid var(--plate-lo); }
+#cats button { border: 1px solid var(--plate-lo); background: var(--chip); color: var(--text); border-radius: 16px; padding: 6px 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+#cats button[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+#items { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 8px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; align-content: start; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px 7px; border: 1px solid var(--plate-lo); background: var(--paper); color: var(--ink); border-radius: 8px; cursor: grab; min-height: 104px; touch-action: pan-y; }
+.tile .pv { width: 100%; height: 64px; pointer-events: none; }
+.tile span { font-size: 12.5px; line-height: 1.15; text-align: center; font-weight: 500; pointer-events: none; }
+.tile[aria-pressed="true"] { outline: 3px solid var(--signal); outline-offset: -1px; background: #FFF6D6; }
+
+/* ---------- foglio ---------- */
+#stage { grid-row: 2; position: relative; overflow: hidden; background-color: var(--paper); touch-action: none; min-width: 0; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#stage.gridbg {
+  background-image:
+    linear-gradient(to right, rgba(44,50,54,.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(44,50,54,.12) 1px, transparent 1px),
+    linear-gradient(to right, rgba(44,50,54,.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(44,50,54,.05) 1px, transparent 1px);
+}
+
+/* simboli (foglio, anteprime della tavolozza, stampa) */
+.sch line, .sch path, .sch rect, .sch circle, .sch ellipse, .sch polyline {
+  stroke: var(--ink); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round;
+}
+.sch text { fill: var(--ink); stroke: none; font-family: var(--cond); }
+.sch .thin { stroke-width: 1.1; }
+.sch .dash { stroke-dasharray: 3.5 2.6; stroke-width: 1.15; }
+.sch .dash.lt { stroke-width: 1; }
+.sch .dsh { stroke-dasharray: 2.5 2; }
+.sch .ac { stroke-width: 1.35; }
+.sch .fi { fill: var(--ink); }
+.sch .mush { fill: var(--handle); }
+.sch .xr { stroke: var(--live); stroke-width: 2; }
+.sch .fz { fill: var(--paper); }
+.sch .fz.blown { stroke: var(--live); }
+.sch .tripb { fill: var(--live); stroke: none; }
+.sch .hb { fill: #fff; stroke-width: .8; }
+.sch .hbf { fill: #F0A020; stroke: none; }
+.sch .hbf.hot { fill: var(--live); }
+.sch .th { fill: var(--paper); }
+.sch .th.trip { stroke: var(--live); fill: #FFE1E3; }
+.sch .coil { fill: var(--paper); }
+.sch .coil.en { fill: #FFD9DC; stroke: var(--live); stroke-width: 2; }
+.sch .coil.bad { stroke-dasharray: 3 2; }
+.sch .pb { fill: #fff; stroke-width: .7; }
+.sch .pbf { fill: var(--signal); stroke: none; }
+.sch .lmp { fill: var(--paper); }
+.sch .lmp.on.c-RD, .sch .glow.c-RD { fill: #FF4D4F; } .sch .lmp.on.c-GN, .sch .glow.c-GN { fill: #2ECC5C; }
+.sch .lmp.on.c-YE, .sch .glow.c-YE { fill: #FFD21F; } .sch .lmp.on.c-WH, .sch .glow.c-WH { fill: #FFFFFF; }
+.sch .lmp.on.c-BU, .sch .glow.c-BU { fill: #3D8BFF; }
+.sch .lmp.dm.c-RD { fill: #FFC2C3; } .sch .lmp.dm.c-GN { fill: #BDEFC9; } .sch .lmp.dm.c-YE { fill: #FFF1B0; } .sch .lmp.dm.c-WH { fill: #F4F4F4; } .sch .lmp.dm.c-BU { fill: #C6DCFF; }
+.sch .glow { stroke: none; opacity: .32; }
+.sch .glow.c-WH { fill: #FFE9A8; opacity: .7; }
+.sch .glow.dim { opacity: .15; }
+.sch .badr { stroke: var(--live); stroke-dasharray: 3 2; }
+.sch .bz { fill: var(--paper); }
+.sch .bz.on { fill: #FFD21F; }
+.sch .wave { animation: wv .6s ease-in-out infinite alternate; }
+.sch .wave.w2 { animation-delay: .3s; }
+@keyframes wv { from { opacity: .15 } to { opacity: 1 } }
+.sch .pe { stroke: var(--pe); stroke-width: 2.2; }
+.sch .pe2 { stroke: #F2CC00; stroke-width: 2.2; stroke-dasharray: 4 4; }
+.sch .mc { fill: var(--paper); }
+.sch .mc.on { fill: #E6F6EA; stroke: var(--ok); stroke-width: 2; }
+.sch .mc.stall { fill: #FFE7CC; stroke: var(--warn); stroke-width: 2; }
+.sch .rotor { stroke: var(--ok); stroke-width: 2.4; stroke-dasharray: 6 4.5; }
+.sch .xc { fill: none; }
+.sch .xc.on { fill: rgba(242,179,0,.18); }
+.sch .cyb { fill: var(--paper); }
+.sch .rod { fill: #9AA3A8; stroke-width: 1.2; }
+.sch .lsm { fill: #fff; stroke-width: 1.1; }
+.sch .lsm.act { fill: var(--signal); }
+.sch .sup { fill: #fff; stroke-width: 1.8; }
+.sch .sup.k-hot { fill: #8C4A2F; stroke: #8C4A2F; }
+.sch .sup.k-neu { fill: var(--neu); stroke: var(--neu); }
+.sch .sup.k-pe { fill: var(--pe); stroke: #F2CC00; stroke-width: 2.6; }
+.sch .tmk { fill: var(--paper); }
+.sch .tor { stroke-width: 1.3; }
+.sch .fxm { fill: #FF3B30; stroke: #fff; stroke-width: 1; animation: blink .9s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.sch .selbox { fill: rgba(242,179,0,.14); stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.sch .hlbox { fill: rgba(214,40,57,.10); stroke: var(--live); stroke-width: 2; animation: blink 1s steps(2) infinite; }
+@media (prefers-reduced-motion: reduce) { .sch .fxm, .sch .hlbox, .sch .wave, .sch .w.short { animation: none; } }
+
+/* testi del foglio */
+.sch .lb { font-weight: 700; font-size: 11px; }
+.sch .li { font-weight: 500; font-size: 8.6px; fill: var(--ink-2); }
+.sch .tn { font-weight: 500; font-size: 7.2px; fill: #6A7377; }
+.sch .ts { font-weight: 700; font-size: 7.5px; text-anchor: middle; }
+.sch .tm { font-weight: 700; font-size: 16px; text-anchor: middle; }
+.sch .note { font-family: var(--ui); font-weight: 500; fill: var(--ink-2); }
+.sch .sn { font-weight: 700; font-size: 8.6px; fill: var(--ink-2); }
+.sch .sn, .sch .lb, .sch .li, .sch .tn { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+.sch .sn.ok { fill: var(--ok); } .sch .sn.warn { fill: var(--warn); } .sch .sn.err { fill: var(--live); }
+
+/* fili */
+.sch .w { stroke: var(--ink); stroke-width: 1.6; }
+.sch .wh { stroke: var(--signal); stroke-width: 8; opacity: .55; }
+.sch .w.live { stroke: var(--live); }
+.sch .w.neu { stroke: var(--neu); }
+.sch .w.pe { stroke: var(--pe); }
+.sch .w.cur { stroke-width: 3.2; }
+.sch .w.short { stroke: #E0119A; stroke-width: 3.6; animation: blink .5s steps(2) infinite; }
+.sch .w.brk { stroke: var(--live); stroke-dasharray: 2 4; stroke-width: 2; }
+.sch .brkm { fill: #fff; stroke: var(--live); stroke-width: 1.8; }
+.sch .jd { fill: var(--ink); stroke: none; }
+.sch .ot { fill: #fff; stroke: #E8871E; stroke-width: 1.3; }
+
+/* sovrapposizioni dell'editor */
+#cv .ov * { vector-effect: non-scaling-stroke; }
+#cv .pv-w { stroke: var(--signal); stroke-width: 3; stroke-dasharray: 6 4; fill: none; }
+#cv .pv-p { fill: var(--signal); stroke: var(--ink); stroke-width: 1; }
+#cv .snapmk { fill: none; stroke: var(--signal); stroke-width: 2.5; }
+#cv .band { fill: rgba(242,179,0,.12); stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 5 4; }
+#cv .ghost { opacity: .5; }
+#cv .weh { fill: #fff; stroke: var(--signal); stroke-width: 2; }
+#cv .prb { stroke: #fff; stroke-width: 2; }
+#cv .prb.r { fill: var(--live); } #cv .prb.b { fill: #1A1A1A; }
+#cv .prbt { font: 700 11px var(--ui); fill: #fff; stroke: none; }
+
+/* ---------- pannelli ---------- */
+.card { background: var(--card); color: var(--text); border: 1px solid var(--plate-lo); border-radius: 12px; box-shadow: 0 10px 30px rgba(20,24,26,.18), 0 2px 6px rgba(20,24,26,.1); }
+#props { position: absolute; right: 12px; bottom: 12px; width: 300px; max-height: calc(100% - 24px); overflow: auto; padding: 12px 14px 14px; z-index: 6; -webkit-user-select: text; user-select: text; }
+#props h3 { margin: 0 0 8px; font: 700 17px var(--cond); padding-right: 30px; }
+#props .x { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--text-2); cursor: pointer; }
+#props .f { display: flex; flex-direction: column; gap: 3px; margin-bottom: 9px; }
+#props label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+#props input, #props select, #props textarea { height: 40px; border: 1px solid var(--plate-lo); border-radius: 7px; padding: 0 10px; background: var(--field); font-size: 16px; width: 100%; }
+#props textarea { height: 76px; padding: 8px 10px; resize: vertical; }
+#props .unit { display: flex; align-items: center; gap: 6px; }
+#props .unit input { flex: 1; min-width: 0; }
+#props .unit span { font-weight: 600; color: var(--text-2); min-width: 22px; }
+#props .acts { display: flex; gap: 6px; margin-top: 6px; }
+#props .acts .btn { flex: 1; padding: 0 6px; font-size: 14px; }
+#props .btn.danger { color: var(--live); }
+#props .note2 { font-size: 13px; color: var(--text-2); margin: 0 0 8px; line-height: 1.35; }
+#props .note2.warn { color: var(--warn); }
+
+#meter { position: absolute; right: 12px; top: 12px; width: 240px; padding: 10px; z-index: 6; background: #F2C230; color: #2C3236; border: 2px solid #2C3236; border-radius: 16px; box-shadow: 0 10px 26px rgba(20,24,26,.25); }
+#meter .lcd { background: #B9C6A8; border: 2px solid #2C3236; border-radius: 6px; height: 58px; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; font: 600 32px/1 var(--cond); font-variant-numeric: tabular-nums; color: #1F2A1F; letter-spacing: .02em; }
+#meter .lcd small { font-size: 18px; margin-left: 5px; }
+#meter .row { display: flex; gap: 6px; margin-top: 8px; }
+#meter .row button { flex: 1; height: 38px; border-radius: 19px; border: 2px solid #2C3236; background: #F7E3A1; color: #2C3236; font-weight: 700; cursor: pointer; }
+#meter .row button[aria-pressed="true"] { background: #2C3236; color: #fff; }
+#meter .msg { font-size: 12.5px; line-height: 1.3; margin-top: 7px; min-height: 16px; font-weight: 600; }
+#meter .probes { font-size: 12.5px; font-weight: 600; margin-top: 5px; line-height: 1.3; }
+#meter .probes i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; border: 1.5px solid #fff; }
+
+#hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; background: rgba(44,50,54,.88); color: #fff; padding: 8px 14px; border-radius: 20px; font-size: 14px; font-weight: 500; z-index: 5; max-width: calc(100% - 360px); text-align: center; pointer-events: none; }
+#hint:empty { display: none; }
+#wirebar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 54px; display: flex; gap: 6px; padding: 6px; z-index: 6; }
+#toasts { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 7; max-width: min(440px, calc(100% - 290px)); pointer-events: none; }
+.toast { background: #2C3236; color: #fff; border-radius: 10px; padding: 9px 13px; font-size: 14px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0,0,0,.2); animation: tin .18s ease-out; }
+.toast.trip { background: #7A1420; } .toast.err { background: var(--live); } .toast.warn { background: #8A4A0B; } .toast.ok { background: var(--ok); }
+@keyframes tin { from { opacity: 0; transform: translateY(-6px); } }
+
+#empty { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 40px)); padding: 22px 24px; z-index: 3; }
+#empty h2 { margin: 0 0 6px; font: 700 24px var(--cond); }
+#empty p { margin: 0 0 14px; line-height: 1.45; color: var(--text-2); font-size: 15.5px; }
+#empty .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* menu a comparsa e finestre */
+#pop { position: fixed; z-index: 30; min-width: 240px; max-width: calc(100vw - 16px); padding: 6px; }
+#pop button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; border: 0; background: none; border-radius: 7px; font-size: 15.5px; font-weight: 500; cursor: pointer; min-height: 44px; color: var(--text); }
+#pop button:active, #pop button:hover { background: var(--hover); }
+#pop button span { display: block; }
+#pop button small { display: block; color: var(--text-2); font-size: 12.5px; font-weight: 400; margin-top: 1px; }
+#pop button .chk { width: 18px; flex: none; text-align: center; font-weight: 700; color: var(--ok); }
+#pop .hr { height: 1px; background: var(--plate-lo); margin: 4px 6px; }
+#pop .ttl { font: 700 14px var(--cond); color: var(--text-2); padding: 6px 12px 3px; }
+#veil { position: fixed; inset: 0; z-index: 29; background: transparent; }
+#modal { position: fixed; inset: 0; z-index: 40; background: rgba(28,32,34,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#modal .card { width: min(580px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 20px 22px; -webkit-user-select: text; user-select: text; }
+#modal h2 { margin: 0 0 10px; font: 700 23px var(--cond); }
+#modal h3 { margin: 16px 0 4px; font: 700 17px var(--cond); }
+#modal p, #modal li { line-height: 1.45; font-size: 15.5px; }
+#modal p { margin: 0 0 8px; }
+#modal ul { margin: 4px 0 8px; padding-left: 20px; }
+#modal .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+#modal input[type=text] { width: 100%; height: 44px; border: 1px solid var(--plate-lo); border-radius: 8px; padding: 0 12px; font-size: 17px; background: var(--field); }
+#modal .lst { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+#modal .it { display: flex; align-items: center; gap: 8px; border: 1px solid var(--plate-lo); border-radius: 9px; padding: 6px 6px 6px 12px; }
+#modal .it > div, #modal .it .t { flex: 1; min-width: 0; display: block; }
+#modal .it small { display: block; }
+#modal .it b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#modal .it small { color: var(--text-2); }
+#modal button.it { width: 100%; text-align: left; background: var(--field); color: var(--text); cursor: pointer; padding: 10px 12px; font: inherit; }
+#modal button.it:active { background: var(--hover); }
+#modal .log { font: 500 14px/1.45 var(--ui); max-height: 55vh; overflow: auto; }
+#modal .log div { padding: 4px 0; border-bottom: 1px solid var(--hover); }
+#modal .log span { color: var(--text-2); font-variant-numeric: tabular-nums; margin-right: 8px; }
+#modal .log .trip, #modal .log .err { color: var(--live); } #modal .log .warn { color: var(--warn); }
+#modal .btn.pri { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+#modal kbd { font: 600 13px var(--ui); border: 1px solid var(--plate-lo); border-radius: 4px; padding: 1px 5px; background: var(--field); }
+#modal .warnbox { background: #FFF1F2; color: #5B1017; border: 1px solid #F3B7BD; border-radius: 9px; padding: 10px 12px; }
+#modal .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14.5px; margin: 6px 0; }
+#modal .legend i { display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: 3px; margin-right: 6px; }
+#fin { display: none; }
+
+/* ---------- iPad verticale e schermi stretti ---------- */
+#palbtn { display: none; }
+@media (max-width: 1480px) {
+  .brand .wm, .zx { display: none !important; }
+  body.sim #b-file .tl, body.sim #b-ex .tl { display: none; }
+}
+@media (max-width: 1020px) {
+  .seg button .tl, .btn .tl { display: none; }
+  .mainsw .lab small { display: none; }
+  .brand .wm { display: none; }
+}
+@media (max-width: 960px) {
+  #app { grid-template-columns: 1fr; }
+  #pal { position: absolute; left: 0; top: calc(var(--bar-h) + env(safe-area-inset-top, 0px)); bottom: 0; width: min(300px, 86vw); transform: translateX(-102%); transition: transform .22s ease, opacity .2s; box-shadow: 6px 0 24px rgba(0,0,0,.2); z-index: 20; }
+  body.palopen #pal { transform: none; }
+  #palhead { display: flex; }
+  #palbtn { display: inline-flex; }
+  #stage { grid-column: 1; }
+  #hint { max-width: calc(100% - 24px); }
+  #props { left: 8px; right: 8px; width: auto; bottom: 8px; max-height: 48%; }
+  #toasts { max-width: calc(100% - 24px); }
+  body.sim #toasts { top: 150px; }
+}
+@media (max-width: 800px) {
+  #simclock { display: none; }
+  .mainsw .lab { display: none; }
+}
+@media (max-width: 600px) {
+  .hide-s { display: none !important; }
+  #bar { overflow-x: auto; scrollbar-width: none; }
+  #bar::-webkit-scrollbar { display: none; }
+  #bar > * { flex: none; }
+  .mainsw { position: sticky; right: 0; background: var(--plate); padding-left: 6px; }
+}
+/* dentro claude.ai la cornice gestisce già i margini di sicurezza */
+body.embed #app { height: 100%; padding-top: 0; }
+
+/* ---------- stampa ---------- */
+#print { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  html, body { background: #fff; height: auto; overflow: visible; }
+  #app, #pop, #veil, #modal { display: none !important; }
+  #print { display: block; }
+  #print svg { width: 100%; height: auto; max-height: 180mm; }
+  #print .foot { display: flex; justify-content: space-between; border-top: 1.5px solid #000; margin-top: 4mm; padding-top: 2mm; font: 600 11pt var(--ui); color: #000; }
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <button class="btn ico" id="palbtn" aria-label="Mostra i simboli" title="Simboli">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    </button>
+    <div class="brand" title="QuadroSim">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="3" y="3" width="58" height="58" rx="10" fill="#F2B300" stroke="#2C3236" stroke-width="3"/><rect x="27" y="8" width="10" height="48" rx="5" fill="#C8102E" transform="rotate(90 32 32)"/></svg>
+      <span class="wm">QuadroSim</span>
+    </div>
+    <div class="grp">
+      <button class="btn" id="b-file" title="File"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="tl">File</span></button>
+      <button class="btn" id="b-ex" title="Esempi"><svg viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v14H6.5A2.5 2.5 0 0 0 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span class="tl">Esempi</span></button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp edit-only">
+      <button class="btn ico" id="b-undo" aria-label="Annulla" title="Annulla"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button class="btn ico" id="b-redo" aria-label="Ripeti" title="Ripeti"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+      <div class="seg" id="tools" role="group" aria-label="Strumento">
+        <button data-tool="sel" aria-pressed="true" title="Seleziona e sposta"><svg viewBox="0 0 24 24"><path d="m5 3 14 7-6 2-2 6z"/></svg><span class="tl">Seleziona</span></button>
+        <button data-tool="wire" aria-pressed="false" title="Disegna i fili"><svg viewBox="0 0 24 24"><circle cx="5" cy="5" r="2.2"/><circle cx="19" cy="19" r="2.2"/><path d="M5 7.2V19h11.8"/></svg><span class="tl">Filo</span></button>
+        <button data-tool="area" aria-pressed="false" title="Seleziona più elementi"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5" stroke-dasharray="3 2.6"/></svg><span class="tl">Area</span></button>
+      </div>
+    </div>
+    <div class="grp sim-only">
+      <span id="simclock">00:00,0</span>
+      <div class="seg" id="simtools" role="group" aria-label="Strumento di simulazione">
+        <button data-st="cmd" aria-pressed="true" title="Aziona pulsanti, selettori e interruttori"><svg viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v5"/><path d="M13 9.5a2 2 0 0 1 4 0V12"/><path d="M17 11a2 2 0 0 1 4 0v4a7 7 0 0 1-7 7h-1.5a6 6 0 0 1-4.7-2.3L4 16.5a2 2 0 0 1 3-2.6l2 2"/></svg><span class="tl">Comanda</span></button>
+        <button data-st="meter" aria-pressed="false" title="Misura con il tester"><svg viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="4.5" rx="1"/><circle cx="12" cy="15.5" r="2.6"/></svg><span class="tl">Tester</span></button>
+        <button data-st="fault" aria-pressed="false" title="Inserisci o ripara guasti"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span class="tl">Guasti</span></button>
+      </div>
+      <button class="btn" id="b-hidden" title="Inserisci un guasto nascosto da trovare"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="tl" id="hidlab">Guasto nascosto</span></button>
+      <button class="btn ico" id="b-log" title="Registro degli eventi" aria-label="Registro degli eventi"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
+      <button class="btn ico" id="b-reset" title="Ricomincia la simulazione" aria-label="Ricomincia la simulazione"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="grp">
+      <button class="btn ico zx" id="b-zout" aria-label="Riduci" title="Riduci"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <span id="zlab" class="zx">100%</span>
+      <button class="btn ico zx" id="b-zin" aria-label="Ingrandisci" title="Ingrandisci"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="btn ico" id="b-fit" aria-label="Adatta allo schermo" title="Adatta allo schermo"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <button class="btn ico" id="b-help" aria-label="Guida rapida" title="Guida rapida"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.3a2.8 2.8 0 1 1 3.6 2.7c-.6.2-.9.7-.9 1.3v.7"/><path d="M12 17.2v.1"/></svg></button>
+    <button class="mainsw" id="mainsw" aria-pressed="false" title="Avvia o ferma la simulazione">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="3" y="3" width="58" height="58" rx="9" fill="#F2B300" stroke="#2C3236" stroke-width="2"/>
+        <circle cx="32" cy="32" r="22" fill="#E2A600" stroke="#2C3236" stroke-width="1.4"/>
+        <text x="32" y="12.5" font-size="9" text-anchor="middle" font-weight="700" fill="#2C3236" font-family="Barlow, sans-serif">0</text>
+        <text x="55.5" y="35.2" font-size="9" text-anchor="middle" font-weight="700" fill="#2C3236" font-family="Barlow, sans-serif">I</text>
+        <g class="hd"><rect x="27" y="9" width="10" height="46" rx="5" fill="#C8102E" stroke="#2C3236" stroke-width="1.4"/><circle cx="32" cy="32" r="6" fill="#A50D26" stroke="#2C3236" stroke-width="1.2"/><rect x="30.5" y="12" width="3" height="11" rx="1.5" fill="#fff" opacity=".85"/></g>
+      </svg>
+      <span class="lab"><span id="swlab">Simula</span><small id="swsub">schema fermo</small></span>
+    </button>
+  </header>
+
+  <aside id="pal" aria-label="Simboli">
+    <div id="palhead"><span>Simboli</span><button class="btn ico" id="palclose" aria-label="Chiudi i simboli"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div id="cats"></div>
+    <div id="items"></div>
+  </aside>
+
+  <main id="stage" class="gridbg">
+    <svg id="cv" class="sch" xmlns="http://www.w3.org/2000/svg" aria-label="Foglio di disegno"><g id="world"></g></svg>
+    <div id="empty" class="card" hidden>
+      <h2>Foglio vuoto</h2>
+      <p>Scegli un simbolo nella colonna dei simboli e tocca il foglio per posarlo, oppure trascinalo. Collega i morsetti con lo strumento Filo, poi gira l'interruttore giallo per provare lo schema.</p>
+      <div class="acts"><button class="btn" id="e-ex">Apri un esempio</button><button class="btn" id="e-help">Guida rapida</button></div>
+    </div>
+    <div id="props" class="card" hidden></div>
+    <div id="meter" hidden>
+      <div class="lcd" id="m-lcd">– – –</div>
+      <div class="row"><button id="m-v" aria-pressed="true">V</button><button id="m-o" aria-pressed="false">Ω</button><button id="m-x" title="Togli i puntali">Stacca</button></div>
+      <div class="probes"><i style="background:#D62839"></i><span id="m-r">Rosso: tocca un morsetto o un filo</span></div>
+      <div class="probes"><i style="background:#1A1A1A"></i><span id="m-b">Nero: —</span></div>
+      <div class="msg" id="m-msg"></div>
+    </div>
+    <div id="wirebar" class="card" hidden><button class="btn" id="wb-end">Fine filo</button><button class="btn" id="wb-back">Togli l'ultimo tratto</button><button class="btn" id="wb-cancel">Annulla</button></div>
+    <div id="hint"></div>
+    <div id="toasts" aria-live="polite"></div>
+  </main>
+</div>
+<div id="print"></div>
+<input type="file" id="fin" accept="application/json,.json">
+<script>
+'use strict';
+/* =========================================================================
+   QuadroSim — core
+   Simboli IEC, modelli elettrici, netlist geometrica, risolutore nodale
+   in fasori (MNA complesso) e simulazione a passo fisso.
+   ========================================================================= */
+
+const G = 10;
+const snap = v => Math.round(v / G) * G;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+function rotPt(x, y, r) {
+  switch (r) { case 90: return [-y, x]; case 180: return [-x, -y]; case 270: return [y, -x]; default: return [x, y]; }
+}
+function uid(p) { return (p || 'c') + Math.random().toString(36).slice(2, 9); }
+const f2 = n => Math.round(n * 100) / 100;
+function esc(s) { return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+const cl = c => (c ? ` class="${c}"` : '');
+const L = (x1, y1, x2, y2, c) => `<line x1="${f2(x1)}" y1="${f2(y1)}" x2="${f2(x2)}" y2="${f2(y2)}"${cl(c)}/>`;
+const P = (d, c) => `<path d="${d}"${cl(c)}/>`;
+const RC = (x, y, w, h, c) => `<rect x="${f2(x)}" y="${f2(y)}" width="${f2(w)}" height="${f2(h)}"${cl(c)}/>`;
+const CI = (x, y, r, c) => `<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(r)}"${cl(c)}/>`;
+const EL = (x, y, rx, ry, c) => `<ellipse cx="${f2(x)}" cy="${f2(y)}" rx="${f2(rx)}" ry="${f2(ry)}"${cl(c)}/>`;
+const dashPath = (pts, c) => P('M' + pts.map(p => f2(p[0]) + ',' + f2(p[1])).join(' L'), c || 'dash');
+const tk = t => String(t == null ? '' : t).trim().toUpperCase();
+const fmtN = n => String(Math.round(n * 100) / 100).replace('.', ',');
+
+/* ---------- numeri complessi ---------- */
+const cplx = (re, im) => ({ re, im });
+const polar = (m, d) => cplx(m * Math.cos(d * Math.PI / 180), m * Math.sin(d * Math.PI / 180));
+const cabs = z => Math.hypot(z.re, z.im);
+const csub = (a, b) => cplx(a.re - b.re, a.im - b.im);
+const carg = z => Math.atan2(z.im, z.re) * 180 / Math.PI;
+
+/* ---------- potenziali di alimentazione (sistema TN-S 400/230 V, 50 Hz) ---------- */
+const POTS = {
+  L1: { v: polar(230, 0), label: 'L1', kind: 'hot' },
+  L2: { v: polar(230, -120), label: 'L2', kind: 'hot' },
+  L3: { v: polar(230, 120), label: 'L3', kind: 'hot' },
+  N: { v: cplx(0, 0), label: 'N', kind: 'neu' },
+  PE: { v: cplx(0, 0), label: 'PE', kind: 'pe' },
+  P24: { v: cplx(24, 0), label: '+24 V', kind: 'hot' },
+  M0: { v: cplx(0, 0), label: '0 V', kind: 'neu' },
+};
+
+const VN_OPTS = [['any', 'Qualsiasi'], ['24', '24 V'], ['48', '48 V'], ['110', '110 V'], ['230', '230 V'], ['400', '400 V']];
+const VN_FIELD = { k: 'Vn', label: 'Tensione nominale', kind: 'sel', opts: VN_OPTS };
+const vnum = Vn => (Vn === 'any' ? 0 : +Vn);
+const loadR = (Vn, VA) => { const v = vnum(Vn) || 230; return v * v / VA; };
+const LAMP_COLS = [['RD', 'Rosso'], ['GN', 'Verde'], ['YE', 'Giallo'], ['WH', 'Bianco'], ['BU', 'Blu']];
+const ON0_FIELD = { k: 'on0', label: 'Posizione all\'avvio', kind: 'bool', yes: 'Chiuso', no: 'Aperto' };
+
+/* ---------- registro dei tipi ---------- */
+const TYPES = {};
+function def(t, o) {
+  o.type = t; o.props = o.props || {}; o.fields = o.fields || []; o.terms = o.terms || [];
+  TYPES[t] = o; return o;
+}
+const CATS = [
+  { id: 'alim', name: 'Alimentazione' },
+  { id: 'prot', name: 'Protezione e manovra' },
+  { id: 'cmd', name: 'Comandi' },
+  { id: 'rel', name: 'Contattori e relè' },
+  { id: 'load', name: 'Utilizzatori' },
+  { id: 'pneu', name: 'Elettropneumatica' },
+  { id: 'misc', name: 'Varie' },
+];
+const PALETTE = [];
+function pal(cat, type, label, props) { PALETTE.push({ cat, type, label: label || TYPES[type].name, props: props || null }); }
+
+/* ---------- primitive dei contatti (asse verticale, polo in x) ---------- */
+function cNO(x, closed) {
+  return L(x, -30, x, -10) + L(x, 10, x, 30) + (closed ? L(x, 10, x, -10, 'bl cl') : L(x, 10, x - 11, -12, 'bl'));
+}
+function cNC(x, closed) {
+  return L(x, -30, x, -10) + L(x, -10, x + 9, -10) + L(x, 10, x, 30) +
+    (closed ? L(x, 10, x + 11, -13, 'bl cl') : L(x, 10, x + 14, -3, 'bl'));
+}
+function cCO(toNO) {
+  // comune in basso (0,30); NA in alto a sinistra (-10,-30); NC in alto a destra (10,-30)
+  return L(0, 30, 0, 10) + L(-10, -30, -10, -10) + L(10, -30, 10, -10) + L(10, -10, 4, -10) +
+    (toNO ? L(0, 10, -10, -10, 'bl cl') : L(0, 10, 7, -12, 'bl cl'));
+}
+const midNO = (x, closed) => (closed ? [x, 0] : [x - 5.5, -1]);
+const midNC = (x, closed) => (closed ? [x + 5.5, -1.5] : [x + 7, 3.5]);
+const markC = x => P(`M${x - 3.5},-10 A3.5,3.5 0 0 0 ${x + 3.5},-10`); // funzione contattore
+const markB = x => L(x - 3.5, -13.5, x + 3.5, -6.5) + L(x - 3.5, -6.5, x + 3.5, -13.5); // interruttore
+const markD = x => L(x - 4.5, -10, x + 4.5, -10); // sezionatore
+
+function glyph(kind, ax) {
+  switch (kind) {
+    case 'push': return P(`M${ax + 5},-6 H${ax} V6 H${ax + 5}`, 'ac');
+    case 'mush': return P(`M${ax},-8 A8,8 0 0 0 ${ax},8 Z`, 'mush') + L(ax, -8, ax, 8, 'ac');
+    case 'sel': return P(`M${ax - 4},-7 H${ax} V7 H${ax + 4}`, 'ac');
+    case 'hand': return L(ax, -6, ax, 6, 'ac');
+    case 'therm': return RC(ax - 11, -7, 11, 14, 'ac') + P(`M${ax - 8},5 V0 H${ax - 3} V-5`, 'ac');
+    case 'sens': return RC(ax - 13, -7, 13, 14, 'ac');
+    case 'rot': return CI(ax - 5, 0, 5, 'ac') + L(ax - 10, 0, ax, 0, 'ac');
+    default: return '';
+  }
+}
+const SENS_OPTS = [['P', 'Pressostato'], ['θ', 'Termostato'], ['L', 'Livello (galleggiante)'], ['F', 'Fotocellula'], ['X', 'Prossimità']];
+
+/* ---------- alimentazioni ---------- */
+def('sup', {
+  name: 'Alimentazione', cat: 'alim', prefix: '', noTag: true, fam: 'sup',
+  terms: [{ id: 'p', x: 0, y: 0, n: '' }], box: [-12, -30, 12, 3], props: { pot: 'L1' },
+  fields: [{ k: 'pot', label: 'Conduttore', kind: 'sel', opts: Object.keys(POTS).map(k => [k, POTS[k].label]) }],
+  draw(c) {
+    const p = POTS[c.props.pot] || POTS.L1;
+    return { g: L(0, 0, 0, -9) + CI(0, -14, 5, 'sup k-' + p.kind), tx: [{ x: 0, y: -23, ry: -14, s: p.label, cls: 'lb', side: 1 }] };
+  },
+  model(c, S, E) { E.Rn(E.net(c, 'p'), E.pot(c.props.pot), 0.001, 'sup:' + c.id, E.vtx(c, 'p'), -1); },
+});
+const GRID_P = ['L1', 'L2', 'L3', 'N', 'PE'];
+def('grid', {
+  name: 'Rete 3F+N+PE', cat: 'alim', prefix: '', noTag: true, fam: 'sup',
+  terms: GRID_P.map((id, i) => ({ id, x: i * 20, y: 0, n: '' })), box: [-12, -30, 92, 3],
+  draw() {
+    let g = ''; const tx = [];
+    GRID_P.forEach((p, i) => { const x = i * 20; g += L(x, 0, x, -9) + CI(x, -14, 5, 'sup k-' + POTS[p].kind); tx.push({ x, y: -23, rx: x, ry: -14, s: p, cls: 'lb', side: 1 }); });
+    return { g, tx };
+  },
+  model(c, S, E) { for (const p of GRID_P) E.Rn(E.net(c, p), E.pot(p), 0.001, 'sup:' + c.id + ':' + p, E.vtx(c, p), -1); },
+});
+
+function xfModel(c, S, E, ph, pc, sh, sc, Vp) {
+  const ld = S.ld[c.id]; if (ld && ld.burnt) return;
+  const Vs = +c.props.Vs, Sn = +c.props.Sn || 100, k = Vs / Vp;
+  const nph = E.net(c, ph), npc = E.net(c, pc), nsh = E.net(c, sh), nsc = E.net(c, sc);
+  E.Rn(nph, npc, Vp * Vp / (0.03 * Sn), c.id + ':mag', E.vtx(c, ph), E.vtx(c, pc));
+  const a = E.node(), b = E.node(), m = E.node(), s0 = E.node();
+  E.Rn(nph, a, 0.001, c.id + ':ph', E.vtx(c, ph), -1);
+  E.Rn(npc, b, 0.001, c.id + ':pc', E.vtx(c, pc), -1);
+  E.XF(b, a, s0, m, k, c.id + ':xf');
+  E.Rn(m, nsh, Math.max(0.02, 0.02 * Vs * Vs / Sn), c.id + ':sh', -1, E.vtx(c, sh));
+  E.Rn(s0, nsc, 0.001, c.id + ':sc', -1, E.vtx(c, sc));
+  S.xfn[c.id] = { m, s0 };
+}
+def('xfmr', {
+  name: 'Trasformatore', cat: 'alim', prefix: 'T', fam: 'xf',
+  terms: [{ id: 'p0', x: -10, y: -40 }, { id: 'p1', x: 10, y: -40 }, { id: 's0', x: -10, y: 40 }, { id: 's1', x: 10, y: 40 }],
+  box: [-22, -42, 22, 42], props: { Vp: 230, Vs: 24, Sn: 100 },
+  fields: [
+    { k: 'Vp', label: 'Tensione primaria', kind: 'sel', num: 1, opts: [[230, '230 V'], [400, '400 V']] },
+    { k: 'Vs', label: 'Tensione secondaria', kind: 'sel', num: 1, opts: [[12, '12 V'], [24, '24 V'], [48, '48 V'], [110, '110 V'], [230, '230 V']] },
+    { k: 'Sn', label: 'Potenza nominale', kind: 'num', unit: 'VA', min: 10, max: 10000 },
+  ],
+  tnum: c => ['0', String(c.props.Vp), '0', String(c.props.Vs)],
+  info: c => c.props.Vp + '/' + c.props.Vs + ' V',
+  draw(c, v) {
+    const k = v && v.on ? 'xc on' : 'xc';
+    return { g: L(-10, -40, -10, -15.6) + L(10, -40, 10, -15.6) + L(-10, 40, -10, 15.6) + L(10, 40, 10, 15.6) + CI(0, -9, 12, k) + CI(0, 9, 12, k), tx: [] };
+  },
+  model(c, S, E) { xfModel(c, S, E, 'p1', 'p0', 's1', 's0', +c.props.Vp); },
+});
+def('psu', {
+  name: 'Alimentatore 24 V c.c.', cat: 'alim', prefix: 'G', fam: 'xf',
+  terms: [{ id: 'l', x: -10, y: -40, n: 'L' }, { id: 'n', x: 10, y: -40, n: 'N' }, { id: 'm', x: -10, y: 40, n: '−' }, { id: 'p', x: 10, y: 40, n: '+' }],
+  box: [-22, -42, 22, 42], props: { Vs: 24, Sn: 60 },
+  fields: [
+    { k: 'Vs', label: 'Tensione di uscita', kind: 'sel', num: 1, opts: [[12, '12 V'], [24, '24 V'], [48, '48 V']] },
+    { k: 'Sn', label: 'Potenza nominale', kind: 'num', unit: 'W', min: 10, max: 2000 },
+  ],
+  info: c => '230 V~ / ' + c.props.Vs + ' V=',
+  draw(c, v) {
+    const on = v && v.on;
+    return {
+      g: L(-10, -40, -10, -20) + L(10, -40, 10, -20) + L(-10, 40, -10, 20) + L(10, 40, 10, 20) + RC(-20, -20, 40, 40, on ? 'xc on' : 'xc') +
+        L(-20, 20, 20, -20, 'thin') + P('M-15,-9 q3,-5 6,0 t6,0', 'thin') + L(4, 10, 15, 10, 'thin') + L(4, 13, 15, 13, 'thin dsh'),
+      tx: [],
+    };
+  },
+  model(c, S, E) { xfModel(c, S, E, 'l', 'n', 'p', 'm', 230); },
+});
+
+/* ---------- protezione e manovra ---------- */
+function polesTerms(xs, nums) {
+  const t = [];
+  xs.forEach((x, i) => {
+    t.push({ id: 't' + i, x, y: -30, n: nums ? nums[i][0] : String(2 * i + 1) });
+    t.push({ id: 'b' + i, x, y: 30, n: nums ? nums[i][1] : String(2 * i + 2) });
+  });
+  return t;
+}
+function fuseSym(x, blown) {
+  if (!blown) return RC(x - 5, -15, 10, 30, 'fz') + L(x, -30, x, 30);
+  return RC(x - 5, -15, 10, 30, 'fz blown') + L(x, -30, x, -15) + L(x, 15, x, 30) + L(x, -15, x, -5) + L(x, 5, x, 15) +
+    L(x - 7, -7, x + 7, 7, 'xr') + L(x - 7, 7, x + 7, -7, 'xr');
+}
+function defFuse(t, name, xs) {
+  def(t, {
+    name, cat: 'prot', prefix: 'FU', fam: 'prot', prot: 'fuse', poles: xs,
+    terms: polesTerms(xs), box: [xs[0] - 10, -32, xs[xs.length - 1] + 10, 32], props: { In: 10 },
+    fields: [{ k: 'In', label: 'Corrente nominale', kind: 'num', unit: 'A', min: 0.5, max: 250 }],
+    info: c => fmtN(c.props.In) + ' A',
+    draw(c, v) {
+      let g = ''; xs.forEach((x, i) => { g += fuseSym(x, v && v.blown[i]); });
+      if (xs.length > 1) g += dashPath([[xs[0] - 5, 0], [xs[xs.length - 1] + 5, 0]], 'dash lt');
+      return { g, tx: [] };
+    },
+    model(c, S, E) { const st = S.pd[c.id]; xs.forEach((x, i) => { if (!st.blown[i]) E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i); }); },
+  });
+}
+defFuse('fuse', 'Fusibile', [0]);
+defFuse('fuse3', 'Fusibili tripolari', [-20, 0, 20]);
+
+function switchGeom(xs, closed, mark, ax, glyphs) {
+  let g = ''; const mids = [];
+  for (const x of xs) {
+    g += cNO(x, closed);
+    if (mark === 'B') g += markB(x); else if (mark === 'D') g += markD(x); else if (mark === 'C') g += markC(x);
+    mids.push(midNO(x, closed));
+  }
+  g += dashPath([[ax, 0], ...mids]) + glyphs;
+  return g;
+}
+function tmBoxes(ax) { // sganciatori termico e magnetico
+  return RC(ax - 11, -7, 11, 14, 'ac') + P(`M${ax - 8},5 V0 H${ax - 3} V-5`, 'ac') +
+    RC(ax - 24, -7, 11, 14, 'ac') + P(`M${ax - 21},-4 L${ax - 16},0 L${ax - 21},4`, 'ac');
+}
+function defBreaker(t, name, xs, nums) {
+  const ax = xs[0] - 16;
+  def(t, {
+    name, cat: 'prot', prefix: 'Q', fam: 'prot', prot: 'mt', poles: xs, sim: 'prot',
+    terms: polesTerms(xs, nums), box: [ax - 26, -32, xs[xs.length - 1] + 8, 32], props: { In: 16, curve: 'C', on0: true },
+    fields: [{ k: 'In', label: 'Corrente nominale', kind: 'num', unit: 'A', min: 0.5, max: 125 },
+      { k: 'curve', label: 'Curva di intervento', kind: 'sel', opts: [['B', 'B (3–5 In)'], ['C', 'C (5–10 In)'], ['D', 'D (10–20 In)']] }, ON0_FIELD],
+    info: c => c.props.curve + fmtN(c.props.In),
+    draw(c, v) {
+      const on = v ? v.on : false;
+      return { g: switchGeom(xs, on, 'B', ax, tmBoxes(ax)) + (v && v.trip ? CI(ax - 12, -15, 5, 'tripb') : ''), tx: [] };
+    },
+    model(c, S, E) { if (S.pd[c.id].on) xs.forEach((x, i) => E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i)); },
+  });
+}
+defBreaker('mt1', 'Magnetotermico 1P', [0]);
+defBreaker('mt2', 'Magnetotermico 1P+N', [-10, 10], [['1', '2'], ['N', 'N']]);
+defBreaker('mt3', 'Magnetotermico 3P', [-20, 0, 20]);
+defBreaker('mt4', 'Magnetotermico 3P+N', [-30, -10, 10, 30], [['1', '2'], ['3', '4'], ['5', '6'], ['N', 'N']]);
+
+def('sm', {
+  name: 'Salvamotore', cat: 'prot', prefix: 'Q', fam: 'prot', prot: 'sm', poles: [-20, 0, 20], sim: 'prot',
+  terms: polesTerms([-20, 0, 20]), box: [-80, -32, 34, 32], props: { Ir: 4, on0: true },
+  fields: [{ k: 'Ir', label: 'Taratura termica', kind: 'num', unit: 'A', min: 0.1, max: 100, step: 0.1 }, ON0_FIELD],
+  info: c => 'Ir ' + fmtN(c.props.Ir) + ' A',
+  draw(c, v) {
+    const on = v ? v.on : false, ax = -36;
+    let g = switchGeom([-20, 0, 20], on, 'B', ax, tmBoxes(ax) + L(ax - 24, 0, ax - 30, 0, 'dash') + glyph('rot', ax - 30));
+    if (v) g += heatBar(27, v.heat);
+    if (v && v.trip) g += CI(ax - 12, -15, 5, 'tripb');
+    return { g, tx: [] };
+  },
+  model(c, S, E) { if (S.pd[c.id].on) [0, 1, 2].forEach(i => E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i)); },
+});
+function heatBar(x, h) {
+  h = clamp(h || 0, 0, 1);
+  h = Math.round(h * 40) / 40;
+  return RC(x, -14, 5, 28, 'hb') + (h > 0.002 ? RC(x, 14 - 28 * h, 5, 28 * h, h > 0.75 ? 'hbf hot' : 'hbf') : '');
+}
+def('ft', {
+  name: 'Relè termico', cat: 'prot', prefix: 'FR', fam: 'prot', prot: 'ft', poles: [-20, 0, 20], sim: 'therm',
+  terms: polesTerms([-20, 0, 20]), box: [-58, -32, 28, 32], props: { Ir: 4 },
+  fields: [{ k: 'Ir', label: 'Taratura', kind: 'num', unit: 'A', min: 0.1, max: 100, step: 0.1 }],
+  info: c => 'Ir ' + fmtN(c.props.Ir) + ' A',
+  draw(c, v) {
+    const tr = v && v.trip; let g = '';
+    for (const x of [-20, 0, 20]) g += L(x, -30, x, -10) + L(x, 10, x, 30) + RC(x - 6, -10, 12, 20, tr ? 'th trip' : 'th') + P(`M${x},-10 V-4 H${x + 3} V4 H${x} V10`, 'thin');
+    g += dashPath([[-26, 0], [-36, 0]]) + glyph('therm', -36);
+    if (v) g += heatBar(-54, v.heat);
+    return { g, tx: [] };
+  },
+  model(c, S, E) { [0, 1, 2].forEach(i => E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i)); },
+});
+function defRCD(t, name, xs, nums) {
+  const ax = xs[0] - 16, mid = (xs[0] + xs[xs.length - 1]) / 2, rx = (xs[xs.length - 1] - xs[0]) / 2 + 9;
+  def(t, {
+    name, cat: 'prot', prefix: 'Q', fam: 'prot', prot: 'id', poles: xs, sim: 'prot',
+    terms: polesTerms(xs, nums), box: [ax - 46, -32, xs[xs.length - 1] + 12, 32], props: { In: 16, Idn: 0.03, mt: true, on0: true },
+    fields: [{ k: 'Idn', label: 'Corrente differenziale IΔn', kind: 'sel', num: 1, opts: [[0.01, '10 mA'], [0.03, '30 mA'], [0.3, '300 mA'], [0.5, '500 mA']] },
+      { k: 'mt', label: 'Tipo', kind: 'bool', yes: 'Magnetotermico differenziale', no: 'Differenziale puro' },
+      { k: 'In', label: 'Corrente nominale', kind: 'num', unit: 'A', min: 1, max: 125 }, ON0_FIELD],
+    info: c => 'IΔn ' + Math.round(c.props.Idn * 1000) + ' mA',
+    draw(c, v) {
+      const on = v ? v.on : false;
+      let g = switchGeom(xs, on, c.props.mt ? 'B' : '', ax, (c.props.mt ? tmBoxes(ax) : '') + '');
+      g += EL(mid, 19, rx, 4, 'tor') + dashPath([[mid - rx, 19], [ax - 30, 19], [ax - 30, 0], [ax - (c.props.mt ? 24 : 0), 0]]);
+      g += RC(ax - 42, 12, 12, 14, 'ac') + P(`M${ax - 40},23 L${ax - 36},15 L${ax - 32},23 Z`, 'ac');
+      if (v && v.trip) g += CI(ax - 12, -15, 5, 'tripb');
+      return { g, tx: [{ x: ax - 36, y: -12, s: 'T', cls: 'ts' }] };
+    },
+    model(c, S, E) { if (S.pd[c.id].on) xs.forEach((x, i) => E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i)); },
+  });
+}
+defRCD('id2', 'Differenziale 1P+N', [-10, 10], [['1', '2'], ['N', 'N']]);
+defRCD('id4', 'Differenziale 3P+N', [-30, -10, 10, 30], [['1', '2'], ['3', '4'], ['5', '6'], ['N', 'N']]);
+function defSez(t, name, xs, nums) {
+  const ax = xs[0] - 16;
+  def(t, {
+    name, cat: 'prot', prefix: 'Q', fam: 'prot', prot: 'sez', poles: xs, sim: 'prot',
+    terms: polesTerms(xs, nums), box: [ax - 6, -32, xs[xs.length - 1] + 8, 32], props: { on0: true }, fields: [ON0_FIELD],
+    draw(c, v) { return { g: switchGeom(xs, v ? v.on : false, 'D', ax, glyph('hand', ax)), tx: [] }; },
+    model(c, S, E) { if (S.pd[c.id].on) xs.forEach((x, i) => E.R(c, 't' + i, 'b' + i, 0.001, c.id + ':' + i)); },
+  });
+}
+defSez('sez2', 'Sezionatore 1P+N', [-10, 10], [['1', '2'], ['N', 'N']]);
+defSez('sez3', 'Sezionatore 3P', [-20, 0, 20]);
+
+/* ---------- contatti ---------- */
+function defContact(t, o) {
+  const kind = o.kind;
+  const terms = kind === 'CO'
+    ? [{ id: 'c', x: 0, y: 30 }, { id: 'no', x: -10, y: -30 }, { id: 'nc', x: 10, y: -30 }]
+    : [{ id: 'a', x: 0, y: -30 }, { id: 'b', x: 0, y: 30 }];
+  const hasAct = o.act && o.act !== 'lim' && o.act !== 'delay';
+  def(t, {
+    name: o.name, cat: o.cat, prefix: o.prefix, fam: 'contact', kind, act: o.act, man: o.man || null,
+    delayed: !!o.delayed, fixedNums: o.nums || null, link: o.link || null, sim: o.man ? o.man : null,
+    terms, box: [hasAct ? -38 : o.act === 'delay' ? -26 : -18, -32, 16, 32], props: o.props || {}, fields: o.fields || [],
+    info: o.info || null,
+    draw(c, v, ctx) {
+      const act = v ? !!v.act : false;
+      let g = '', m;
+      if (kind === 'NO') { const cl2 = v ? v.closed : false; g += cNO(0, cl2); m = midNO(0, cl2); }
+      else if (kind === 'NC') { const cl2 = v ? v.closed : true; g += cNC(0, cl2); m = midNC(0, cl2); }
+      else { const toNO = v ? v.closed : false; g += cCO(toNO); m = toNO ? [-5, 0] : [3.5, -1]; }
+      if (o.mark === 'C') g += markC(0);
+      const tx = [];
+      if (o.act === 'lim') g += P(`M${f2(m[0] - 1)},${f2(m[1] - 5)} L${f2(m[0] - 10)},${f2(m[1])} L${f2(m[0] - 1)},${f2(m[1] + 5)} Z`, 'fi');
+      else if (o.act === 'delay') {
+        const off = ctx && ctx.delayKind === 'tof';
+        g += L(m[0], m[1], m[0] - 8, m[1]) + P(`M${f2(m[0] - 8)},${f2(m[1] - 6)} A6,6 0 0 ${off ? 1 : 0} ${f2(m[0] - 8)},${f2(m[1] + 6)}`);
+      } else if (o.act) {
+        const ax = -22 + (act && o.man === 'press' ? 3 : 0);
+        g += L(ax, 0, m[0], m[1], 'dash') + glyph(o.act, ax);
+        if (o.act === 'sens') tx.push({ x: ax - 6.5, y: 3.5, s: c.props.sk || 'P', cls: 'ts' });
+      }
+      if (v && v.fx) g += CI(8, 0, 4, 'fxm');
+      return { g, tx };
+    },
+    model(c, S, E) {
+      if (kind === 'CO') {
+        const fx = S.fx[c.id];
+        if (fx === 'stuck0') return;
+        const toNO = fx === 'stuck1' ? true : actuated(S, c);
+        E.R(c, 'c', toNO ? 'no' : 'nc', 0.01, c.id);
+      } else if (contactClosed(S, c)) E.R(c, 'a', 'b', 0.01, c.id);
+    },
+  });
+}
+defContact('pbNO', { name: 'Pulsante NA', cat: 'cmd', kind: 'NO', act: 'push', man: 'press', prefix: 'S' });
+defContact('pbNC', { name: 'Pulsante NC', cat: 'cmd', kind: 'NC', act: 'push', man: 'press', prefix: 'S' });
+defContact('em', { name: 'Pulsante di emergenza', cat: 'cmd', kind: 'NC', act: 'mush', man: 'latch', prefix: 'S' });
+defContact('selNO', { name: 'Selettore NA', cat: 'cmd', kind: 'NO', act: 'sel', man: 'toggle', prefix: 'S' });
+defContact('selNC', { name: 'Selettore NC', cat: 'cmd', kind: 'NC', act: 'sel', man: 'toggle', prefix: 'S' });
+defContact('limNO', { name: 'Finecorsa NA', cat: 'cmd', kind: 'NO', act: 'lim', man: 'toggle', prefix: 'SQ' });
+defContact('limNC', { name: 'Finecorsa NC', cat: 'cmd', kind: 'NC', act: 'lim', man: 'toggle', prefix: 'SQ' });
+const SENS_FIELD = { k: 'sk', label: 'Tipo di sensore', kind: 'sel', opts: SENS_OPTS };
+defContact('senNO', { name: 'Sensore NA', cat: 'cmd', kind: 'NO', act: 'sens', man: 'toggle', prefix: 'B', props: { sk: 'P' }, fields: [SENS_FIELD] });
+defContact('senNC', { name: 'Sensore NC', cat: 'cmd', kind: 'NC', act: 'sens', man: 'toggle', prefix: 'B', props: { sk: 'P' }, fields: [SENS_FIELD] });
+defContact('dev', { name: 'Deviatore', cat: 'cmd', kind: 'CO', act: 'sel', man: 'toggle', prefix: 'S', nums: ['', '', ''] });
+def('inv', {
+  name: 'Invertitore', cat: 'cmd', prefix: 'S', fam: 'contact', kind: 'INV', man: 'toggle', sim: 'toggle', fixedNums: ['', '', '', ''],
+  terms: [{ id: 'a1', x: -10, y: -30 }, { id: 'a2', x: 10, y: -30 }, { id: 'b1', x: -10, y: 30 }, { id: 'b2', x: 10, y: 30 }],
+  box: [-36, -32, 16, 32],
+  draw(c, v) {
+    const x = v ? !!v.act : false;
+    let g = L(-10, -30, -10, -12) + L(10, -30, 10, -12) + L(-10, 30, -10, 12) + L(10, 30, 10, 12);
+    g += x ? L(-10, 12, 8, -12, 'bl cl') + L(10, 12, -8, -12, 'bl cl') : L(-10, 12, -12, -12, 'bl cl') + L(10, 12, 8, -12, 'bl cl');
+    g += L(-22, 0, x ? -1 : -11, 0, 'dash') + glyph('sel', -22);
+    if (v && v.fx) g += CI(14, 0, 4, 'fxm');
+    return { g, tx: [] };
+  },
+  model(c, S, E) {
+    if (S.fx[c.id] === 'stuck0') return;
+    if (actuated(S, c)) { E.R(c, 'a1', 'b2', 0.01, c.id + ':x'); E.R(c, 'a2', 'b1', 0.01, c.id + ':y'); }
+    else { E.R(c, 'a1', 'b1', 0.01, c.id + ':x'); E.R(c, 'a2', 'b2', 0.01, c.id + ':y'); }
+  },
+});
+
+// contatti di relè / contattori / temporizzatori / termici
+defContact('cNO', { name: 'Contatto NA', cat: 'rel', kind: 'NO', prefix: 'KM', link: 'coil' });
+defContact('cNC', { name: 'Contatto NC', cat: 'rel', kind: 'NC', prefix: 'KM', link: 'coil' });
+defContact('cCO', { name: 'Contatto in scambio', cat: 'rel', kind: 'CO', prefix: 'KA', link: 'coil' });
+defContact('dNO', { name: 'Contatto temporizzato NA', cat: 'rel', kind: 'NO', act: 'delay', delayed: true, prefix: 'KT', link: 'timer' });
+defContact('dNC', { name: 'Contatto temporizzato NC', cat: 'rel', kind: 'NC', act: 'delay', delayed: true, prefix: 'KT', link: 'timer' });
+defContact('thNC', { name: 'Contatto del termico 95-96', cat: 'rel', kind: 'NC', act: 'therm', prefix: 'FR', link: 'therm', nums: ['95', '96'] });
+defContact('thNO', { name: 'Contatto del termico 97-98', cat: 'rel', kind: 'NO', act: 'therm', prefix: 'FR', link: 'therm', nums: ['97', '98'] });
+
+def('km3', {
+  name: 'Contatti principali', cat: 'rel', prefix: 'KM', fam: 'contact', kind: 'NO3', link: 'coil',
+  terms: polesTerms([-20, 0, 20]), box: [-34, -32, 28, 32], fixedNums: null,
+  draw(c, v) {
+    const cl2 = v ? v.closed : false; let g = ''; const mids = [];
+    for (const x of [-20, 0, 20]) { g += cNO(x, cl2) + markC(x); mids.push(midNO(x, cl2)); }
+    g += dashPath(mids, 'dash lt');
+    if (v && v.fx) g += CI(26, 0, 4, 'fxm');
+    return { g, tx: [] };
+  },
+  model(c, S, E) { if (contactClosed(S, c)) [0, 1, 2].forEach(i => E.R(c, 't' + i, 'b' + i, 0.01, c.id + ':' + i)); },
+});
+
+/* ---------- bobine ---------- */
+function defCoil(t, o) {
+  const tim = o.variant === 'ton' || o.variant === 'tof';
+  def(t, {
+    name: o.name, cat: o.cat || 'rel', prefix: o.prefix, fam: 'coil', variant: o.variant,
+    terms: [{ id: 'a1', x: 0, y: -30, n: 'A1' }, { id: 'a2', x: 0, y: 30, n: 'A2' }],
+    box: [tim ? -26 : -14, -32, 14, 32],
+    props: Object.assign({ Vn: 'any' }, tim ? { t: 3 } : {}),
+    fields: [VN_FIELD].concat(tim ? [{ k: 't', label: 'Tempo di ritardo', kind: 'num', unit: 's', min: 0.1, max: 3600, step: 0.1 }] : []),
+    info: c => (tim ? fmtN(c.props.t) + ' s' : ''),
+    draw(c, v) {
+      const en = v && v.en, bad = v && (v.burnt || v.fx);
+      let g = L(0, -30, 0, -8) + L(0, 8, 0, 30) + RC(-12, -8, 24, 16, 'coil' + (en ? ' en' : '') + (bad ? ' bad' : ''));
+      if (o.variant === 'ton') g += RC(-24, -8, 12, 16) + L(-24, -8, -12, 8, 'thin') + L(-24, 8, -12, -8, 'thin');
+      if (o.variant === 'tof') g += RC(-24, -8, 12, 16, 'fi');
+      if (o.variant === 'pp') g += P('M-8,5 H-3 V-4 H3 V5 H8', 'thin');
+      if (o.variant === 'yv') g += L(-12, 8, 12, -8, 'thin');
+      if (v && tim && c.props.t > 0) {
+        let fr = o.variant === 'ton' ? (v.en ? clamp(v.acc / c.props.t, 0, 1) : 0) : (!v.en && v.dact ? clamp(v.acc / c.props.t, 0, 1) : 0);
+        fr = Math.round(fr * 48) / 48;
+        if (fr > 0) g += RC(-12, 11, 24, 3.5, 'pb') + RC(-12, 11, 24 * fr, 3.5, 'pbf');
+      }
+      if (bad) g += L(-9, -6, 9, 6, 'xr') + L(-9, 6, 9, -6, 'xr');
+      return { g, tx: [] };
+    },
+    model(c, S, E) {
+      const ld = S.ld[c.id];
+      if (S.fx[c.id] === 'open' || (ld && ld.burnt)) return;
+      E.R(c, 'a1', 'a2', loadR(c.props.Vn, 5), c.id);
+    },
+  });
+}
+defCoil('coil', { name: 'Bobina contattore', prefix: 'KM', variant: 'km' });
+defCoil('rcoil', { name: 'Bobina relè', prefix: 'KA', variant: 'ka' });
+defCoil('ton', { name: 'Temporizzatore ritardato all\'eccitazione', prefix: 'KT', variant: 'ton' });
+defCoil('tof', { name: 'Temporizzatore ritardato alla diseccitazione', prefix: 'KT', variant: 'tof' });
+defCoil('pp', { name: 'Relè passo-passo', prefix: 'KP', variant: 'pp' });
+defCoil('yv', { name: 'Bobina elettrovalvola', prefix: 'Y', variant: 'yv', cat: 'pneu' });
+
+/* ---------- utilizzatori ---------- */
+def('lamp', {
+  name: 'Lampada / spia', cat: 'load', prefix: 'H', fam: 'lamp',
+  terms: [{ id: 'x1', x: 0, y: -30, n: 'X1' }, { id: 'x2', x: 0, y: 30, n: 'X2' }], box: [-14, -32, 14, 32],
+  props: { col: 'GN', Vn: 'any' }, fields: [{ k: 'col', label: 'Colore', kind: 'sel', opts: LAMP_COLS }, VN_FIELD],
+  info: c => c.props.col,
+  draw(c, v) {
+    const on = v && v.on, dim = v && v.dim, col = c.props.col, bad = v && (v.burnt || v.fx);
+    let g = L(0, -30, 0, -10) + L(0, 10, 0, 30);
+    if (on || dim) g += CI(0, 0, on ? 18 : 13, 'glow c-' + col + (dim ? ' dim' : ''));
+    g += CI(0, 0, 10, 'lmp' + (on ? ' on c-' + col : dim ? ' dm c-' + col : '')) + L(-7.07, -7.07, 7.07, 7.07) + L(-7.07, 7.07, 7.07, -7.07);
+    if (bad) g += CI(0, 0, 10, 'badr');
+    return { g, tx: [] };
+  },
+  model(c, S, E) {
+    const ld = S.ld[c.id];
+    if (S.fx[c.id] === 'open' || (ld && ld.burnt)) return;
+    E.R(c, 'x1', 'x2', loadR(c.props.Vn, 3), c.id);
+  },
+});
+def('buz', {
+  name: 'Sirena / suoneria', cat: 'load', prefix: 'HA', fam: 'lamp',
+  terms: [{ id: 'x1', x: 0, y: -30, n: '1' }, { id: 'x2', x: 0, y: 30, n: '2' }], box: [-14, -32, 26, 32],
+  props: { Vn: 'any' }, fields: [VN_FIELD],
+  draw(c, v) {
+    const on = v && v.on;
+    let g = L(0, -30, 0, -5) + L(0, 6, 0, 30) + P('M-11,6 A11,11 0 0 1 11,6 Z', 'bz' + (on ? ' on' : ''));
+    if (on) g += P('M15,-6 A9,9 0 0 1 15,8', 'wave') + P('M19,-10 A14,14 0 0 1 19,12', 'wave w2');
+    return { g, tx: [] };
+  },
+  model(c, S, E) { const ld = S.ld[c.id]; if (S.fx[c.id] === 'open' || (ld && ld.burnt)) return; E.R(c, 'x1', 'x2', loadR(c.props.Vn, 4), c.id); },
+});
+
+function motorDraw(c, v, six, single) {
+  const on = v && v.st === 'run', stall = v && v.st === 'stall';
+  let g = '';
+  if (single) g += L(-10, -40, -10, -19.6) + L(10, -40, 10, -19.6) + P('M30,-40 V0 H22', 'pe') + P('M30,-40 V0 H22', 'pe2');
+  else {
+    g += P('M-20,-40 V-30 L-15.56,-15.56') + L(0, -40, 0, -22) + P('M20,-40 V-30 L15.56,-15.56');
+    g += P('M40,-40 V0 H22', 'pe') + P('M40,-40 V0 H22', 'pe2');
+    if (six) g += P('M-20,40 V30 L-15.56,15.56') + L(0, 40, 0, 22) + P('M20,40 V30 L15.56,15.56');
+  }
+  g += CI(0, 0, 22, 'mc' + (on ? ' on' : '') + (stall ? ' stall' : ''));
+  if (v && v.spin) g += `<circle cx="0" cy="0" r="16" class="rotor" data-rotor="${c.id}"/>`;
+  if (v && v.fx) g += CI(20, -20, 4, 'fxm');
+  return { g, tx: [{ x: 0, y: -1, s: 'M', cls: 'tm' }, { x: 0, y: 12, s: single ? '1~' : '3~', cls: 'ts' }] };
+}
+function motorFields(extra) {
+  return [{ k: 'In', label: 'Corrente nominale', kind: 'num', unit: 'A', min: 0.1, max: 500, step: 0.1 }].concat(extra || []);
+}
+def('mot3', {
+  name: 'Motore trifase', cat: 'load', prefix: 'M', fam: 'motor', Vw: 230,
+  terms: [{ id: 'u', x: -20, y: -40, n: 'U1' }, { id: 'v', x: 0, y: -40, n: 'V1' }, { id: 'w', x: 20, y: -40, n: 'W1' }, { id: 'pe', x: 40, y: -40, n: 'PE' }],
+  box: [-26, -44, 46, 26], props: { In: 4 }, fields: motorFields(),
+  info: c => fmtN(c.props.In) + ' A',
+  draw(c, v) { return motorDraw(c, v, false, false); },
+  model(c, S, E) {
+    const mo = S.mo[c.id], Rn = 230 / c.props.In / mo.fac, n = E.node(); mo.star = n;
+    if (!mo.openW) E.Rn(E.net(c, 'u'), n, Rn, c.id + ':u', E.vtx(c, 'u'), -1);
+    E.Rn(E.net(c, 'v'), n, Rn, c.id + ':v', E.vtx(c, 'v'), -1);
+    E.Rn(E.net(c, 'w'), n, Rn, c.id + ':w', E.vtx(c, 'w'), -1);
+    motorEarth(c, S, E, 'u');
+  },
+});
+def('mot6', {
+  name: 'Motore trifase 6 morsetti', cat: 'load', prefix: 'M', fam: 'motor', Vw: 400,
+  terms: [{ id: 'u', x: -20, y: -40, n: 'U1' }, { id: 'v', x: 0, y: -40, n: 'V1' }, { id: 'w', x: 20, y: -40, n: 'W1' }, { id: 'pe', x: 40, y: -40, n: 'PE' },
+    { id: 'w2', x: -20, y: 40, n: 'W2' }, { id: 'u2', x: 0, y: 40, n: 'U2' }, { id: 'v2', x: 20, y: 40, n: 'V2' }],
+  box: [-26, -44, 46, 44], props: { In: 8 }, fields: motorFields(),
+  info: c => fmtN(c.props.In) + ' A',
+  draw(c, v) { return motorDraw(c, v, true, false); },
+  model(c, S, E) {
+    const mo = S.mo[c.id], Rn = 400 * Math.sqrt(3) / c.props.In / mo.fac;
+    if (!mo.openW) E.R(c, 'u', 'u2', Rn, c.id + ':u');
+    E.R(c, 'v', 'v2', Rn, c.id + ':v');
+    E.R(c, 'w', 'w2', Rn, c.id + ':w');
+    motorEarth(c, S, E, 'u');
+  },
+});
+def('mot1', {
+  name: 'Motore monofase', cat: 'load', prefix: 'M', fam: 'motor', Vw: 230,
+  terms: [{ id: 'u1', x: -10, y: -40, n: 'U1' }, { id: 'u2', x: 10, y: -40, n: 'U2' }, { id: 'pe', x: 30, y: -40, n: 'PE' }],
+  box: [-26, -44, 36, 26], props: { In: 2 }, fields: motorFields(),
+  info: c => fmtN(c.props.In) + ' A',
+  draw(c, v) { return motorDraw(c, v, false, true); },
+  model(c, S, E) {
+    const mo = S.mo[c.id];
+    if (!mo.openW) E.R(c, 'u1', 'u2', 230 / c.props.In / mo.fac, c.id + ':u');
+    motorEarth(c, S, E, 'u1');
+  },
+});
+/* guasto a massa (fase-carcassa) e persona che tocca la carcassa (corpo ≈ 1 kΩ verso terra) */
+function motorEarth(c, S, E, t) {
+  const mo = S.mo[c.id];
+  if (mo.earth) E.R(c, t, 'pe', mo.earth === 1 ? 1 : 2000, c.id + ':earth');
+  if (mo.touch) E.Rn(E.net(c, 'pe'), E.pot('PE'), 1000, c.id + ':body', E.vtx(c, 'pe'), -1);
+}
+
+/* ---------- elettropneumatica ---------- */
+def('cyl', {
+  name: 'Cilindro pneumatico', cat: 'pneu', prefix: 'A', fam: 'cyl',
+  box: [-46, -30, 92, 30], props: { yp: 'Y1', ym: '', ts: 2 },
+  fields: [
+    { k: 'yp', label: 'Bobina di uscita (A+)', kind: 'text' },
+    { k: 'ym', label: 'Bobina di rientro (A−), vuoto = ritorno a molla', kind: 'text' },
+    { k: 'ts', label: 'Tempo di corsa', kind: 'num', unit: 's', min: 0.2, max: 60, step: 0.1 },
+  ],
+  info: c => 'A+ ' + (c.props.yp || '—') + (c.props.ym ? ', A− ' + c.props.ym : ', molla'),
+  draw(c, v) {
+    const pos = v ? Math.round(v.pos * 60) / 60 : 0, px = -36 + pos * 46, end = px + 5 + 60;
+    let g = RC(-40, -13, 60, 26, 'cyb') + RC(px, -11, 5, 22, 'fi') + RC(px + 5, -3, end - px - 5, 6, 'rod');
+    g += L(-32, 13, -32, 19) + L(12, 13, 12, 19);
+    g += P('M34,19 L28,27 L40,27 Z', 'lsm' + (v && pos <= 0.02 ? ' act' : '')) + P('M80,19 L74,27 L86,27 Z', 'lsm' + (v && pos >= 0.98 ? ' act' : ''));
+    const t = String(c.tag || 'A').toLowerCase();
+    return { g, tx: [{ x: 34, y: -18, s: t + '0', cls: 'li' }, { x: 80, y: -18, s: t + '1', cls: 'li' }] };
+  },
+});
+
+/* ---------- varie ---------- */
+def('term', {
+  name: 'Morsetto', cat: 'misc', prefix: 'X', fam: 'term',
+  terms: [{ id: 't', x: 0, y: -10, n: '' }, { id: 'b', x: 0, y: 10, n: '' }], box: [-8, -12, 8, 12], props: { num: '1' },
+  fields: [{ k: 'num', label: 'Numero morsetto', kind: 'text' }],
+  labelText: c => (c.tag || 'X') + ':' + c.props.num,
+  draw() { return { g: L(0, -10, 0, -4) + L(0, 4, 0, 10) + CI(0, 0, 4, 'tmk') + L(-3, 3, 3, -3, 'thin'), tx: [] }; },
+  model(c, S, E) { if (S.fx[c.id] !== 'open') E.R(c, 't', 'b', 0.001, c.id); },
+});
+def('text', {
+  name: 'Testo', cat: 'misc', prefix: '', noTag: true, fam: 'text', norot: true,
+  props: { text: 'Nota', size: 14 },
+  fields: [{ k: 'text', label: 'Testo', kind: 'area' }, { k: 'size', label: 'Dimensione', kind: 'num', unit: 'pt', min: 8, max: 48 }],
+  boxOf(c) {
+    const lines = String(c.props.text).split('\n'), s = +c.props.size || 14;
+    const w = Math.max(...lines.map(l => l.length)) * s * 0.52 + 4;
+    return [-2, -s, w, (lines.length - 1) * s * 1.25 + s * 0.35];
+  },
+  draw(c) {
+    const s = +c.props.size || 14;
+    return { g: '', tx: String(c.props.text).split('\n').map((l, i) => ({ x: 0, y: i * s * 1.25, s: l, cls: 'note', a: 'start', fs: s })) };
+  },
+});
+
+/* ---------- palette ---------- */
+pal('alim', 'sup', 'Fase L1', { pot: 'L1' }); pal('alim', 'sup', 'Fase L2', { pot: 'L2' }); pal('alim', 'sup', 'Fase L3', { pot: 'L3' });
+pal('alim', 'sup', 'Neutro N', { pot: 'N' }); pal('alim', 'sup', 'Protezione PE', { pot: 'PE' });
+pal('alim', 'sup', '+24 V', { pot: 'P24' }); pal('alim', 'sup', '0 V', { pot: 'M0' });
+pal('alim', 'grid'); pal('alim', 'xfmr'); pal('alim', 'psu');
+['fuse', 'fuse3', 'mt1', 'mt2', 'mt3', 'mt4', 'sm', 'ft', 'id2', 'id4', 'sez2', 'sez3'].forEach(t => pal('prot', t));
+['pbNO', 'pbNC', 'em', 'selNO', 'selNC', 'limNO', 'limNC', 'senNO', 'senNC', 'dev', 'inv'].forEach(t => pal('cmd', t));
+['coil', 'km3', 'cNO', 'cNC', 'cCO', 'rcoil', 'ton', 'tof', 'dNO', 'dNC', 'pp', 'thNC', 'thNO'].forEach(t => pal('rel', t));
+['lamp', 'buz', 'mot3', 'mot6', 'mot1'].forEach(t => pal('load', t));
+pal('pneu', 'yv'); pal('pneu', 'cyl'); pal('pneu', 'limNO', 'Finecorsa NA (a0, a1…)'); pal('pneu', 'limNC', 'Finecorsa NC (a0, a1…)');
+pal('misc', 'term'); pal('misc', 'text');
+
+/* =========================================================================
+   Geometria del documento
+   ========================================================================= */
+function termPos(c, t) { const [x, y] = rotPt(t.x, t.y, c.rot || 0); return [c.x + x, c.y + y]; }
+function compBox(c) {
+  const ty = TYPES[c.type]; const b = ty.boxOf ? ty.boxOf(c) : ty.box;
+  if (ty.norot) return [c.x + b[0], c.y + b[1], c.x + b[2], c.y + b[3]];
+  const p = [rotPt(b[0], b[1], c.rot || 0), rotPt(b[2], b[3], c.rot || 0)];
+  return [c.x + Math.min(p[0][0], p[1][0]), c.y + Math.min(p[0][1], p[1][1]), c.x + Math.max(p[0][0], p[1][0]), c.y + Math.max(p[0][1], p[1][1])];
+}
+function onSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.abs(px - ax) < 0.5 && Math.abs(py - ay) < 0.5 ? 0 : -1;
+  const t = ((px - ax) * dx + (py - ay) * dy) / l2;
+  if (t < -1e-9 || t > 1 + 1e-9) return -1;
+  if (Math.abs(ax + t * dx - px) > 0.5 || Math.abs(ay + t * dy - py) > 0.5) return -1;
+  return t;
+}
+
+/* Netlist geometrica: i fili si collegano solo agli estremi (o dove un estremo
+   cade su un altro filo, giunzione a T); due fili che si incrociano non sono collegati. */
+function buildNet(doc, broken) {
+  const vKey = new Map(), vPos = [];
+  const vtx = (x, y) => {
+    x = Math.round(x * 10) / 10; y = Math.round(y * 10) / 10;
+    const k = x + ',' + y; let i = vKey.get(k);
+    if (i === undefined) { i = vPos.length; vKey.set(k, i); vPos.push([x, y]); }
+    return i;
+  };
+  const termV = {}, attach = [], tcount = new Map();
+  for (const c of doc.comps) {
+    const ty = TYPES[c.type]; if (!ty || !ty.terms.length) continue;
+    const m = termV[c.id] = {};
+    for (const t of ty.terms) { const [x, y] = termPos(c, t); const v = vtx(x, y); m[t.id] = v; attach.push([x, y]); tcount.set(v, (tcount.get(v) || 0) + 1); }
+  }
+  const wires = doc.wires.filter(w => !(broken && broken.has(w.id)) && w.pts.length > 1);
+  for (const w of wires) { attach.push(w.pts[0], w.pts[w.pts.length - 1]); }
+  const edges = [];
+  for (const w of wires) {
+    const p = w.pts;
+    for (let i = 0; i < p.length - 1; i++) {
+      const [ax, ay] = p[i], [bx, by] = p[i + 1];
+      const pts = [[0, ax, ay], [1, bx, by]];
+      for (const q of attach) { const t = onSeg(q[0], q[1], ax, ay, bx, by); if (t > 1e-9 && t < 1 - 1e-9) pts.push([t, q[0], q[1]]); }
+      pts.sort((u, v) => u[0] - v[0]);
+      for (let j = 0; j < pts.length - 1; j++) {
+        const va = vtx(pts[j][1], pts[j][2]), vb = vtx(pts[j + 1][1], pts[j + 1][2]);
+        if (va !== vb) edges.push({ w: w.id, a: va, b: vb });
+      }
+    }
+  }
+  const par = vPos.map((_, i) => i);
+  const find = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  for (const e of edges) { const ra = find(e.a), rb = find(e.b); if (ra !== rb) par[ra] = rb; }
+  const netOf = new Int32Array(vPos.length), idx = new Map(); let nNets = 0;
+  for (let i = 0; i < vPos.length; i++) { const r = find(i); let n = idx.get(r); if (n === undefined) { n = nNets++; idx.set(r, n); } netOf[i] = n; }
+  const tn = {};
+  for (const id in termV) { tn[id] = {}; for (const t in termV[id]) tn[id][t] = netOf[termV[id][t]]; }
+  const deg = new Int32Array(vPos.length); for (const e of edges) { deg[e.a]++; deg[e.b]++; }
+  return { vPos, vKey, edges, netOf, nNets, tn, termV, deg, tcount };
+}
+
+/* =========================================================================
+   Risolutore nodale modificato (fasori complessi)
+   ========================================================================= */
+function gaussC(Ar, Ai, br, bi, N) {
+  for (let col = 0; col < N; col++) {
+    let piv = col, best = -1;
+    for (let r = col; r < N; r++) { const m = Ar[r * N + col] ** 2 + Ai[r * N + col] ** 2; if (m > best) { best = m; piv = r; } }
+    if (best < 1e-40) continue;
+    if (piv !== col) {
+      for (let c = col; c < N; c++) {
+        const a = piv * N + c, b = col * N + c;
+        let t = Ar[a]; Ar[a] = Ar[b]; Ar[b] = t; t = Ai[a]; Ai[a] = Ai[b]; Ai[b] = t;
+      }
+      let t = br[piv]; br[piv] = br[col]; br[col] = t; t = bi[piv]; bi[piv] = bi[col]; bi[col] = t;
+    }
+    const pr = Ar[col * N + col], pi = Ai[col * N + col], den = pr * pr + pi * pi, ir = pr / den, ii = -pi / den;
+    for (let r = col + 1; r < N; r++) {
+      const xr = Ar[r * N + col], xi = Ai[r * N + col];
+      if (xr === 0 && xi === 0) continue;
+      const fr = xr * ir - xi * ii, fi = xr * ii + xi * ir;
+      for (let c = col; c < N; c++) {
+        const ar = Ar[col * N + c], ai = Ai[col * N + c];
+        if (ar === 0 && ai === 0) continue;
+        Ar[r * N + c] -= fr * ar - fi * ai; Ai[r * N + c] -= fr * ai + fi * ar;
+      }
+      br[r] -= fr * br[col] - fi * bi[col]; bi[r] -= fr * bi[col] + fi * br[col];
+    }
+  }
+  for (let r = N - 1; r >= 0; r--) {
+    let sr = br[r], si = bi[r];
+    for (let c = r + 1; c < N; c++) {
+      const ar = Ar[r * N + c], ai = Ai[r * N + c];
+      if (ar === 0 && ai === 0) continue;
+      sr -= ar * br[c] - ai * bi[c]; si -= ar * bi[c] + ai * br[c];
+    }
+    const pr = Ar[r * N + r], pi = Ai[r * N + r], den = pr * pr + pi * pi;
+    if (den < 1e-40) { br[r] = 0; bi[r] = 0; continue; }
+    br[r] = (sr * pr + si * pi) / den; bi[r] = (si * pr - sr * pi) / den;
+  }
+}
+/* rami: R {a,b,g}  V {a,b,re,im} (a = +)  XF {p1,p2,s1,s2,k}: V(s2)-V(s1) = k(V(p2)-V(p1)) */
+function solveMNA(nNodes, br, inj) {
+  const gnd = nNodes, par = new Int32Array(nNodes + 1);
+  for (let i = 0; i <= nNodes; i++) par[i] = i;
+  const find = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  const uni = (a, b) => { a = find(a < 0 ? gnd : a); b = find(b < 0 ? gnd : b); if (a !== b) par[a] = b; };
+  for (const b of br) {
+    if (b.t === 'XF') { uni(b.p1, b.p2); uni(b.p1, b.s1); uni(b.s1, b.s2); } else uni(b.a, b.b);
+  }
+  const Vre = new Float64Array(nNodes), Vim = new Float64Array(nNodes);
+  const groups = new Map();
+  const gOf = r => { let g = groups.get(r); if (!g) { g = { br: [], src: false, nodes: [] }; groups.set(r, g); } return g; };
+  for (let i = 0; i < br.length; i++) {
+    const b = br[i], n0 = b.t === 'XF' ? b.p1 : b.a;
+    const g = gOf(find(n0 < 0 ? gnd : n0)); g.br.push(i); if (b.t !== 'R') g.src = true;
+  }
+  if (inj) for (const k in inj) gOf(find(+k)).src = true;
+  for (let n = 0; n < nNodes; n++) { const g = groups.get(find(n)); if (g) g.nodes.push(n); }
+  for (const g of groups.values()) {
+    if (!g.src) continue;
+    const nodes = g.nodes, li = new Map(); nodes.forEach((n, i) => li.set(n, i));
+    const src = g.br.filter(i => br[i].t !== 'R');
+    const n = nodes.length, N = n + src.length;
+    if (!N) continue;
+    const Ar = new Float64Array(N * N), Ai = new Float64Array(N * N), br2 = new Float64Array(N), bi2 = new Float64Array(N);
+    const ix = x => (x < 0 ? -1 : li.get(x));
+    for (let i = 0; i < n; i++) Ar[i * N + i] += 1e-9;
+    let k = n;
+    for (const bi of g.br) {
+      const b = br[bi];
+      if (b.t === 'R') {
+        const a = ix(b.a), c = ix(b.b), gg = b.g;
+        if (a >= 0) Ar[a * N + a] += gg;
+        if (c >= 0) Ar[c * N + c] += gg;
+        if (a >= 0 && c >= 0) { Ar[a * N + c] -= gg; Ar[c * N + a] -= gg; }
+      } else if (b.t === 'V') {
+        const a = ix(b.a), c = ix(b.b);
+        if (a >= 0) { Ar[a * N + k] += 1; Ar[k * N + a] += 1; }
+        if (c >= 0) { Ar[c * N + k] -= 1; Ar[k * N + c] -= 1; }
+        br2[k] = b.re; bi2[k] = b.im; b._k = k; k++;
+      } else {
+        const p1 = ix(b.p1), p2 = ix(b.p2), s1 = ix(b.s1), s2 = ix(b.s2), r = b.k;
+        if (s2 >= 0) { Ar[s2 * N + k] += 1; Ar[k * N + s2] += 1; }
+        if (s1 >= 0) { Ar[s1 * N + k] -= 1; Ar[k * N + s1] -= 1; }
+        if (p2 >= 0) { Ar[p2 * N + k] -= r; Ar[k * N + p2] -= r; }
+        if (p1 >= 0) { Ar[p1 * N + k] += r; Ar[k * N + p1] += r; }
+        b._k = k; k++;
+      }
+    }
+    if (inj) for (const key in inj) { const i = li.get(+key); if (i !== undefined) br2[i] += inj[key]; }
+    gaussC(Ar, Ai, br2, bi2, N);
+    for (let i = 0; i < n; i++) { Vre[nodes[i]] = br2[i]; Vim[nodes[i]] = bi2[i]; }
+    for (const bi of src) { const b = br[bi]; b.Ire = br2[b._k]; b.Iim = bi2[b._k]; }
+  }
+  return { Vre, Vim };
+}
+
+/* =========================================================================
+   QuadroSim — simulazione
+   ========================================================================= */
+const MAG = { B: 5, C: 10, D: 20 };
+function fmtA(I) {
+  if (I >= 1000) return fmtN(Math.round(I / 100) / 10) + ' kA';
+  if (I >= 1) return fmtN(Math.round(I * 10) / 10) + ' A';
+  return Math.round(I * 1000) + ' mA';
+}
+function fmtV(V) { return V >= 100 ? Math.round(V) + ' V' : fmtN(Math.round(V * 10) / 10) + ' V'; }
+const tagOf = c => c.tag || TYPES[c.type].name;
+
+function evt(S, msg, kind) { const e = { t: S.t, msg, kind: kind || 'info' }; S.log.push(e); S.evts.push(e); if (S.log.length > 300) S.log.shift(); }
+
+function actuated(S, c) {
+  const ty = TYPES[c.type], k = tk(c.tag), lk = S.link[k];
+  if (lk) {
+    switch (lk.kind) {
+      case 'coil': { const co = S.co[k]; if (!co) return false; return ty.delayed && (co.variant === 'ton' || co.variant === 'tof') ? co.dact : co.act; }
+      case 'prot': return !!(S.pd[lk.id] && S.pd[lk.id].on);
+      case 'therm': return !!(S.pd[lk.id] && S.pd[lk.id].trip);
+      case 'cyl0': { const cy = S.cy[lk.cyl]; return !!cy && cy.pos <= 0.02; }
+      case 'cyl1': { const cy = S.cy[lk.cyl]; return !!cy && cy.pos >= 0.98; }
+    }
+  }
+  if (ty.man) return !!S.man[k];
+  return false;
+}
+function contactClosed(S, c) {
+  const fx = S.fx[c.id];
+  if (fx === 'stuck1') return true;
+  if (fx === 'stuck0') return false;
+  const a = actuated(S, c);
+  return TYPES[c.type].kind === 'NC' ? !a : a;
+}
+
+function simCreate(doc) {
+  const S = {
+    doc, t: 0, man: {}, co: {}, pd: {}, ld: {}, mo: {}, cy: {}, fx: {}, wfx: new Set(), link: {}, xfn: {},
+    dirty: true, halt: null, log: [], evts: [], hidden: null, sol: null, cur: {}, br: [], edgeI: null, netCls: null,
+    coils: [], prots: [], lamps: [], motors: [], xfs: [], cyls: [], anim: false, solN: 0,
+  };
+  for (const c of doc.comps) {
+    const ty = TYPES[c.type]; if (!ty) continue;
+    switch (ty.fam) {
+      case 'coil': {
+        S.coils.push(c); S.ld[c.id] = { V: 0, on: false, burnt: false };
+        const k = tk(c.tag); if (!S.co[k]) S.co[k] = { en: false, act: false, dact: false, acc: 0, prev: false, variant: ty.variant, comp: c };
+        break;
+      }
+      case 'prot': S.prots.push(c); S.pd[c.id] = { on: c.props.on0 !== false, trip: false, heat: 0, hp: [0, 0, 0, 0], blown: [false, false, false, false], I: 0 }; break;
+      case 'lamp': S.lamps.push(c); S.ld[c.id] = { V: 0, on: false, dim: false, burnt: false }; break;
+      case 'motor': S.motors.push(c); S.mo[c.id] = { st: 'stop', dir: 1, speed: 0, fac: 1, ol: false, lock: false, earth: 0, openW: false, touch: false, bodyI: 0, bodyLv: -1, conn: '', frameV: 0, sq: 0 }; break;
+      case 'xf': S.xfs.push(c); S.ld[c.id] = { on: false, burnt: false }; break;
+      case 'cyl': S.cyls.push(c); S.cy[tk(c.tag)] = { pos: 0, comp: c }; break;
+    }
+  }
+  const put = (k, v) => { if (k && !S.link[k]) S.link[k] = v; };
+  for (const c of doc.comps) { const ty = TYPES[c.type]; if (ty && ty.fam === 'coil') put(tk(c.tag), { kind: 'coil', id: c.id }); }
+  for (const c of doc.comps) { const ty = TYPES[c.type]; if (ty && ty.fam === 'prot' && ty.prot !== 'fuse' && ty.prot !== 'ft') put(tk(c.tag), { kind: 'prot', id: c.id }); }
+  for (const c of doc.comps) { const ty = TYPES[c.type]; if (ty && ty.prot === 'ft') put(tk(c.tag), { kind: 'therm', id: c.id }); }
+  for (const c of S.cyls) { const k = tk(c.tag); if (!k) continue; put(k + '0', { kind: 'cyl0', cyl: k }); put(k + '1', { kind: 'cyl1', cyl: k }); }
+  S.NL = buildNet(doc, S.wfx);
+  return S;
+}
+
+/* ---------- costruzione dei rami e soluzione ---------- */
+function solveNow(S) {
+  const NL = S.NL; let nNodes = NL.nNets;
+  const br = [], potNode = {};
+  S.xfn = {};
+  const E = {
+    net: (c, t) => NL.tn[c.id][t],
+    vtx: (c, t) => NL.termV[c.id][t],
+    node: () => nNodes++,
+    pot(p) {
+      let n = potNode[p];
+      if (n === undefined) { n = potNode[p] = nNodes++; const v = (POTS[p] || POTS.L1).v; br.push({ t: 'V', a: n, b: -1, re: v.re, im: v.im, key: 'pot:' + p }); }
+      return n;
+    },
+    R(c, ta, tb, r, key) { br.push({ t: 'R', a: NL.tn[c.id][ta], b: NL.tn[c.id][tb], g: 1 / r, key, va: NL.termV[c.id][ta], vb: NL.termV[c.id][tb] }); },
+    Rn(a, b, r, key, va, vb) { br.push({ t: 'R', a, b, g: 1 / r, key, va: va == null ? -1 : va, vb: vb == null ? -1 : vb }); },
+    XF(p1, p2, s1, s2, k, key) { br.push({ t: 'XF', p1, p2, s1, s2, k, key }); },
+  };
+  for (const c of S.doc.comps) { const ty = TYPES[c.type]; if (ty && ty.model && (NL.tn[c.id] || !ty.terms.length)) ty.model(c, S, E); }
+  const sol = solveMNA(nNodes, br);
+  const cur = {};
+  for (const b of br) {
+    if (b.t === 'R') {
+      const ar = b.a >= 0 ? sol.Vre[b.a] : 0, ai = b.a >= 0 ? sol.Vim[b.a] : 0, cr = b.b >= 0 ? sol.Vre[b.b] : 0, ci = b.b >= 0 ? sol.Vim[b.b] : 0;
+      b.Ire = (ar - cr) * b.g; b.Iim = (ai - ci) * b.g;
+    } else { b.Ire = b.Ire || 0; b.Iim = b.Iim || 0; }
+    if (b.key) cur[b.key] = b;
+  }
+  S.sol = sol; S.cur = cur; S.br = br; S.nNodes = nNodes; S.potNode = potNode; S.solN++;
+}
+const Imag = (S, key) => { const b = S.cur[key]; return b ? Math.hypot(b.Ire, b.Iim) : 0; };
+const nv = (S, n) => (S.sol && n != null && n >= 0 && n < S.sol.Vre.length ? cplx(S.sol.Vre[n], S.sol.Vim[n]) : cplx(0, 0));
+const tv = (S, c, t) => nv(S, S.NL.tn[c.id] ? S.NL.tn[c.id][t] : -1);
+const poleI = (S, c, i) => Imag(S, c.id + ':' + i);
+
+/* ---------- protezioni ---------- */
+function instTrip(S) {
+  let best = null, score = 0;
+  for (const c of S.prots) {
+    const ty = TYPES[c.type], st = S.pd[c.id], np = ty.poles.length;
+    if (ty.prot === 'fuse') {
+      for (let i = 0; i < np; i++) if (!st.blown[i]) { const r = poleI(S, c, i) / c.props.In; if (r >= 8 && r > score) { score = r; best = { c, i, how: 'blow', I: poleI(S, c, i) }; } }
+      continue;
+    }
+    if (!st.on || ty.prot === 'ft' || ty.prot === 'sez') continue;
+    let Imax = 0; for (let i = 0; i < np; i++) Imax = Math.max(Imax, poleI(S, c, i));
+    if (ty.prot === 'mt') { const r = Imax / c.props.In; if (r >= (MAG[c.props.curve] || 10) && r > score) { score = r; best = { c, how: 'mag', I: Imax }; } }
+    else if (ty.prot === 'sm') { const r = Imax / c.props.Ir; if (r >= 13 && r > score) { score = r; best = { c, how: 'mag', I: Imax }; } }
+    else if (ty.prot === 'id') {
+      let sr = 0, si = 0;
+      for (let i = 0; i < np; i++) { const b = S.cur[c.id + ':' + i]; if (b) { sr += b.Ire; si += b.Iim; } }
+      const Id = Math.hypot(sr, si), rd = Id / c.props.Idn;
+      if (rd >= 1 && 1e6 + rd > score) { score = 1e6 + rd; best = { c, how: 'diff', I: Id }; }
+      if (c.props.mt) { const r = Imax / c.props.In; if (r >= 10 && r > score) { score = r; best = { c, how: 'mag', I: Imax }; } }
+    }
+  }
+  return best;
+}
+function applyTrip(S, tr) {
+  const c = tr.c, st = S.pd[c.id];
+  if (tr.how === 'blow') {
+    st.blown[tr.i] = true;
+    evt(S, `${tagOf(c)}: fusibile interrotto${TYPES[c.type].poles.length > 1 ? ' sul polo ' + (tr.i + 1) : ''} (${fmtA(tr.I || 0)})`, 'trip');
+  } else {
+    st.on = false; st.trip = true;
+    const why = tr.how === 'diff' ? 'differenziale, dispersione ' + fmtA(tr.I) : tr.how === 'mag' ? 'magnetico, ' + fmtA(tr.I) : tr.how === 'test' ? 'tasto di prova' : 'termico, sovraccarico';
+    evt(S, `${tagOf(c)}: intervento ${why}`, 'trip');
+  }
+  S.dirty = true;
+}
+function heatUpd(h, r, dt, K) { if (r > 1.05) return h + dt * (r * r - 1) / K; return Math.max(0, h - dt * (1.5 - r * r) / K); }
+function thermalStep(S, dt) {
+  for (const c of S.prots) {
+    const ty = TYPES[c.type], st = S.pd[c.id], np = ty.poles.length;
+    if (ty.prot === 'fuse') {
+      for (let i = 0; i < np; i++) {
+        if (st.blown[i]) continue;
+        const I = poleI(S, c, i); st.hp[i] = heatUpd(st.hp[i], I / c.props.In, dt, 40);
+        if (st.hp[i] >= 1) { st.hp[i] = 0; applyTrip(S, { c, i, how: 'blow', I }); }
+      }
+      continue;
+    }
+    let In;
+    if (ty.prot === 'ft' || ty.prot === 'sm') In = +c.props.Ir;
+    else if (ty.prot === 'mt' || (ty.prot === 'id' && c.props.mt)) In = +c.props.In;
+    else continue;
+    let Imax = 0; for (let i = 0; i < np; i++) Imax = Math.max(Imax, poleI(S, c, i));
+    const h0 = st.heat;
+    st.heat = Math.min(1.2, heatUpd(st.heat, Imax / In, dt, ty.prot === 'ft' || ty.prot === 'sm' ? 18 : 30));
+    st.I = Imax;
+    if (Math.abs(st.heat - h0) > 1e-6 && (ty.prot === 'ft' || ty.prot === 'sm')) S.anim = true;
+    if (st.heat >= 1) {
+      if (ty.prot === 'ft') { if (!st.trip) { st.trip = true; S.dirty = true; evt(S, `${tagOf(c)}: intervento del relè termico (${fmtA(Imax)} con taratura ${fmtN(In)} A)`, 'trip'); } }
+      else if (st.on) applyTrip(S, { c, how: 'therm' });
+    }
+  }
+}
+function solveProtect(S) {
+  for (let it = 0; it < 30; it++) {
+    solveNow(S);
+    const tr = instTrip(S);
+    if (!tr) break;
+    applyTrip(S, tr);
+  }
+  let Imax = 0;
+  for (const b of S.br) if (b.t === 'V') Imax = Math.max(Imax, Math.hypot(b.Ire, b.Iim));
+  if (Imax > 1500) {
+    S.halt = { msg: `Cortocircuito: la corrente sale a ${fmtA(Imax)} e nessuna protezione a monte interviene. Aggiungi fusibili o un interruttore magnetotermico prima del punto di guasto.`, I: Imax };
+    evt(S, 'Cortocircuito non protetto', 'err');
+  }
+  S.dirty = false;
+  flowAndClass(S);
+}
+
+/* ---------- correnti nei fili e classi dei conduttori (per la grafica) ---------- */
+function flowAndClass(S) {
+  const NL = S.NL, nV = NL.vPos.length, edges = NL.edges;
+  const ir = new Float64Array(nV), ii = new Float64Array(nV);
+  for (const b of S.br) if (b.t === 'R') {
+    if (b.va >= 0) { ir[b.va] += b.Ire; ii[b.va] += b.Iim; }
+    if (b.vb >= 0) { ir[b.vb] -= b.Ire; ii[b.vb] -= b.Iim; }
+  }
+  const adj = Array.from({ length: nV }, () => []);
+  edges.forEach((e, k) => { adj[e.a].push(k); adj[e.b].push(k); });
+  const seen = new Uint8Array(nV), eI = new Float64Array(edges.length), order = [];
+  const pe = new Int32Array(nV).fill(-1), pv = new Int32Array(nV).fill(-1);
+  for (let s = 0; s < nV; s++) {
+    if (seen[s] || !adj[s].length) continue;
+    const q = [s]; seen[s] = 1;
+    for (let h = 0; h < q.length; h++) {
+      const v = q[h]; order.push(v);
+      for (const k of adj[v]) { const e = edges[k], u = e.a === v ? e.b : e.a; if (!seen[u]) { seen[u] = 1; pe[u] = k; pv[u] = v; q.push(u); } }
+    }
+  }
+  for (let j = order.length - 1; j >= 0; j--) {
+    const v = order[j];
+    if (pe[v] >= 0) { eI[pe[v]] = Math.hypot(ir[v], ii[v]); ir[pv[v]] += ir[v]; ii[pv[v]] += ii[v]; }
+  }
+  S.edgeI = eI;
+  // classi: conduttori collegati a bassa impedenza a fase / neutro / PE
+  const nN = S.nNodes, adjN = Array.from({ length: nN }, () => []);
+  for (const b of S.br) if (b.t === 'R' && b.g >= 2 && b.a >= 0 && b.b >= 0) { adjN[b.a].push(b.b); adjN[b.b].push(b.a); }
+  const reach = seeds => { const m = new Uint8Array(nN), st = seeds.slice(); for (const s of st) m[s] = 1; while (st.length) { const n = st.pop(); for (const x of adjN[n]) if (!m[x]) { m[x] = 1; st.push(x); } } return m; };
+  const hot = [], neu = [], pe2 = [];
+  for (const p in S.potNode) { const k = POTS[p].kind; (k === 'hot' ? hot : k === 'pe' ? pe2 : neu).push(S.potNode[p]); }
+  for (const id in S.xfn) {
+    const x = S.xfn[id], c = S.doc.comps.find(cc => cc.id === id);
+    neu.push(x.s0);
+    if (c && cabs(csub(nv(S, x.m), nv(S, x.s0))) > 0.5 * (+c.props.Vs)) hot.push(x.m);
+  }
+  const H = reach(hot), Nn = reach(neu), PE = reach(pe2);
+  const cls = new Array(NL.nNets);
+  for (let n = 0; n < NL.nNets; n++) {
+    if (H[n] && (Nn[n] || PE[n])) cls[n] = 'short';
+    else if (H[n]) cls[n] = 'live';
+    else if (PE[n]) cls[n] = 'pe';
+    else if (Nn[n]) cls[n] = 'neu';
+    else cls[n] = cabs(nv(S, n)) > 12 ? 'live' : '';
+  }
+  S.netCls = cls;
+}
+
+/* ---------- carichi ---------- */
+function evalLoads(S, dt) {
+  let ch = false;
+  const dv = (c, a, b) => cabs(csub(tv(S, c, a), tv(S, c, b)));
+  const en = {};
+  for (const c of S.coils) {
+    const ld = S.ld[c.id], u = dv(c, 'a1', 'a2'); ld.V = u;
+    let on = false;
+    if (!ld.burnt && S.fx[c.id] !== 'open') {
+      const vn = vnum(c.props.Vn);
+      if (!vn) on = u >= 12;
+      else if (u > 1.3 * vn) { ld.burnt = true; S.dirty = true; ch = true; evt(S, `${tagOf(c)}: bobina da ${vn} V alimentata a ${Math.round(u)} V, si è bruciata`, 'err'); }
+      else on = u >= 0.8 * vn;
+    }
+    if (ld.on !== on) { ld.on = on; ch = true; }
+    const k = tk(c.tag); en[k] = en[k] || on;
+  }
+  for (const k in S.co) { const e = !!en[k]; if (S.co[k].en !== e) { S.co[k].en = e; ch = true; } }
+  for (const c of S.lamps) {
+    const ld = S.ld[c.id], u = dv(c, 'x1', 'x2'); ld.V = u;
+    let on = false, dim = false;
+    if (!ld.burnt && S.fx[c.id] !== 'open') {
+      const vn = vnum(c.props.Vn);
+      if (!vn) on = u >= 12;
+      else if (u > 1.3 * vn) { ld.burnt = true; S.dirty = true; evt(S, `${tagOf(c)}: da ${vn} V alimentata a ${Math.round(u)} V, si è bruciata`, 'err'); }
+      else { on = u >= 0.8 * vn; dim = !on && u >= 0.3 * vn; }
+    }
+    if (ld.on !== on || ld.dim !== dim) { ld.on = on; ld.dim = dim; ch = true; }
+  }
+  for (const c of S.motors) if (evalMotor(S, c, dt)) ch = true;
+  for (const c of S.xfs) {
+    const ld = S.ld[c.id];
+    if (ld.burnt) { if (ld.on) { ld.on = false; ch = true; } continue; }
+    const Vp = c.type === 'psu' ? 230 : +c.props.Vp;
+    const u = c.type === 'psu' ? dv(c, 'l', 'n') : dv(c, 'p1', 'p0');
+    const on = u >= 0.75 * Vp;
+    if (ld.on !== on) { ld.on = on; ch = true; }
+    const Is = Imag(S, c.id + ':sh'), In2 = (+c.props.Sn || 100) / (+c.props.Vs);
+    if (Is > 15 * In2) {
+      ld.burnt = true; ld.on = false; S.dirty = true; ch = true;
+      evt(S, `${tagOf(c)}: ${c.type === 'psu' ? 'alimentatore' : 'trasformatore'} guasto per cortocircuito sul secondario (${fmtA(Is)}). Proteggi l'uscita con un fusibile.`, 'err');
+    }
+  }
+  return ch;
+}
+function evalMotor(S, c, dt) {
+  const mo = S.mo[c.id], ty = TYPES[c.type], Vw = ty.Vw;
+  let E;
+  if (c.type === 'mot3') { const s = nv(S, mo.star); E = ['u', 'v', 'w'].map(t => csub(tv(S, c, t), s)); }
+  else if (c.type === 'mot6') E = [['u', 'u2'], ['v', 'v2'], ['w', 'w2']].map(([a, b]) => csub(tv(S, c, a), tv(S, c, b)));
+  else E = [csub(tv(S, c, 'u1'), tv(S, c, 'u2'))];
+  const mags = E.map(cabs); if (mo.openW) mags[0] = 0;
+  let st = 'stop', dir = mo.dir;
+  if (c.type === 'mot1') { if (mags[0] >= 0.75 * Vw) { st = 'run'; dir = 1; } else if (mags[0] >= 0.3 * Vw) st = 'stall'; }
+  else {
+    const mx = Math.max(...mags), mn = Math.min(...mags);
+    if (mn >= 0.45 * Vw && mn / mx >= 0.75) {
+      let d = carg(E[1]) - carg(E[0]); d = ((d % 360) + 540) % 360 - 180;
+      if (Math.abs(d + 120) < 30) { st = 'run'; dir = 1; } else if (Math.abs(d - 120) < 30) { st = 'run'; dir = -1; } else st = 'stall';
+    } else if (mx >= 0.3 * Vw) st = 'stall';
+  }
+  if (st === 'run' && mo.lock) st = 'stall';
+  const mean = mags.reduce((a, b) => a + b, 0) / mags.length;
+  const conn = c.type === 'mot6' && st === 'run' ? (mean >= 0.8 * Vw ? 'Δ' : 'Y') : '';
+  const fac = st === 'run' ? (mo.ol ? 1.8 : 1) : st === 'stall' ? 5 : 1;
+  let ch = false;
+  if (fac !== mo.fac) { mo.fac = fac; S.dirty = true; }
+  if (st !== mo.st) {
+    if (st === 'stall') evt(S, `${tagOf(c)}: motore bloccato${mo.lock ? ' (rotore frenato)' : ' (alimentazione incompleta, manca una fase)'}`, 'warn');
+    mo.st = st; ch = true;
+  }
+  if (dir !== mo.dir) { mo.dir = dir; ch = true; }
+  if (conn !== mo.conn) { mo.conn = conn; ch = true; }
+  const sp0 = mo.speed;
+  if (st === 'run') mo.speed = Math.min(1, mo.speed + dt / 1.2);
+  else mo.speed = Math.max(0, mo.speed - dt / (st === 'stall' ? 0.3 : 1.6));
+  mo.moving = mo.speed !== sp0;
+  const sq = mo.speed > 0.01 ? 1 : 0;
+  if (sq !== mo.sq) { mo.sq = sq; ch = true; }
+  const fv = cabs(tv(S, c, 'pe'));
+  if ((fv > 50) !== (mo.frameV > 50)) { ch = true; if (fv > 50) evt(S, `${tagOf(c)}: massa in tensione, ${fmtV(fv)} verso terra`, 'err'); }
+  mo.frameV = fv;
+  // persona che tocca la carcassa
+  const Ib = mo.touch ? Imag(S, c.id + ':body') : 0;
+  const lv = !mo.touch ? -1 : Ib > 0.03 ? 2 : Ib > 0.005 ? 1 : 0;
+  if (lv !== mo.bodyLv) {
+    if (lv === 2) evt(S, `${tagOf(c)}: la persona che tocca la carcassa è attraversata da ${fmtA(Ib)}: folgorazione (oltre 30 mA è pericolosa)`, 'err');
+    else if (lv === 1) evt(S, `${tagOf(c)}: la persona che tocca la carcassa sente una scossa (${fmtA(Ib)})`, 'warn');
+    else if (lv === 0) evt(S, `${tagOf(c)}: la persona tocca la carcassa, nessuna corrente pericolosa`, 'info');
+    mo.bodyLv = lv; ch = true;
+  }
+  if (Math.abs(Ib - mo.bodyI) > 0.001) ch = true;
+  mo.bodyI = Ib;
+  return ch;
+}
+
+/* ---------- meccanica: relè, temporizzatori, cilindri ---------- */
+function mechStep(S, dt) {
+  let ch = false;
+  for (const k in S.co) {
+    const co = S.co[k], T = +co.comp.props.t || 0, a0 = co.act, d0 = co.dact;
+    switch (co.variant) {
+      case 'ton':
+        if (co.en) { co.act = true; co.acc += dt; co.dact = co.acc >= T; if (!co.dact) S.anim = true; }
+        else { co.act = false; co.acc = 0; co.dact = false; }
+        break;
+      case 'tof':
+        if (co.en) { co.act = true; co.dact = true; co.acc = 0; }
+        else { co.act = false; if (co.dact) { co.acc += dt; S.anim = true; if (co.acc >= T) { co.dact = false; co.acc = 0; } } }
+        break;
+      case 'pp':
+        if (co.en && !co.prev) co.act = !co.act;
+        co.prev = co.en; co.dact = co.act;
+        break;
+      default: co.act = co.en; co.dact = co.en;
+    }
+    if (co.act !== a0 || co.dact !== d0) ch = true;
+  }
+  return ch;
+}
+function cylStep(S, dt) {
+  let ch = false;
+  for (const c of S.cyls) {
+    const cy = S.cy[tk(c.tag)], p = c.props;
+    if (!cy) continue;
+    const on = t => { const co = String(t || '').trim() && S.co[tk(t)]; return !!(co && co.act); };
+    const plus = on(p.yp), minus = on(p.ym);
+    let dir = 0;
+    if (plus && !minus) dir = 1; else if (minus && !plus) dir = -1; else if (!plus && !minus && !String(p.ym || '').trim()) dir = -1;
+    const old = cy.pos;
+    cy.pos = clamp(cy.pos + dir * dt / Math.max(0.1, +p.ts || 2), 0, 1);
+    if (cy.pos !== old) { ch = true; S.anim = true; }
+    if ((old <= 0.02) !== (cy.pos <= 0.02) || (old >= 0.98) !== (cy.pos >= 0.98)) S.dirty = true;
+  }
+  return ch;
+}
+
+function simStep(S, dt) {
+  if (S.halt) return false;
+  S.t += dt; S.anim = false;
+  let ch = false;
+  if (S.dirty) { solveProtect(S); ch = true; if (S.halt) return true; }
+  thermalStep(S, dt);
+  if (evalLoads(S, dt)) ch = true;
+  if (mechStep(S, dt)) { S.dirty = true; ch = true; }
+  if (cylStep(S, dt)) ch = true;
+  for (const c of S.motors) if (S.mo[c.id].moving) S.anim = true;
+  return ch || S.dirty || S.anim;
+}
+
+/* ---------- azioni dell'utente in simulazione ---------- */
+function simPress(S, c, down) { const k = tk(c.tag); if (!!S.man[k] !== down) { S.man[k] = down; S.dirty = true; } }
+function simToggle(S, c) { const k = tk(c.tag); S.man[k] = !S.man[k]; S.dirty = true; }
+function simProtTap(S, c) {
+  const ty = TYPES[c.type], st = S.pd[c.id];
+  if (!st) return null;
+  if (ty.prot === 'fuse') {
+    if (st.blown.some(b => b)) { st.blown = st.blown.map(() => false); st.hp = [0, 0, 0, 0]; S.dirty = true; evt(S, `${tagOf(c)}: fusibile sostituito`); return 'Fusibile sostituito'; }
+    return 'Il fusibile è integro';
+  }
+  if (ty.prot === 'ft') {
+    if (!st.trip) return 'Il relè termico non è intervenuto';
+    if (st.heat > 0.6) return 'Aspetta che il relè termico si raffreddi, poi riarmalo';
+    st.trip = false; S.dirty = true; evt(S, `${tagOf(c)}: relè termico riarmato`); return 'Relè termico riarmato';
+  }
+  if (!st.on && st.trip && st.heat > 0.6) return 'Aspetta che lo sganciatore termico si raffreddi, poi richiudi';
+  st.on = !st.on; if (st.on) st.trip = false;
+  S.dirty = true; evt(S, `${tagOf(c)}: ${st.on ? 'chiuso' : 'aperto'}`);
+  return null;
+}
+function simTest(S, c) { const st = S.pd[c.id]; if (st && st.on) applyTrip(S, { c, how: 'test' }); }
+function setWireBreak(S, wid, on) { if (on) S.wfx.add(wid); else S.wfx.delete(wid); S.NL = buildNet(S.doc, S.wfx); S.dirty = true; }
+function resetFaults(S) {
+  S.fx = {}; S.wfx.clear(); S.hidden = null;
+  for (const c of S.motors) Object.assign(S.mo[c.id], { ol: false, lock: false, earth: 0, openW: false, touch: false, bodyLv: -1 });
+  for (const id in S.ld) S.ld[id].burnt = false;
+  S.NL = buildNet(S.doc, S.wfx); S.dirty = true;
+  evt(S, 'Guasti rimossi');
+}
+function faultDesc(S, kind, c) {
+  const ty = TYPES[c.type];
+  switch (kind) {
+    case 'stuck0': return `${ty.name} ${tagOf(c)} interrotto (non chiude mai)`;
+    case 'stuck1': return `${ty.name} ${tagOf(c)} incollato (resta sempre chiuso)`;
+    case 'open': return `${ty.name} ${tagOf(c)} interrotto`;
+    default: return ty.name + ' ' + tagOf(c);
+  }
+}
+function randomFault(S) {
+  const cands = [];
+  for (const c of S.doc.comps) {
+    const ty = TYPES[c.type];
+    if (ty.fam === 'contact' && ty.kind !== 'INV') cands.push({ c, kind: ty.kind === 'NC' ? 'stuck0' : Math.random() < 0.75 ? 'stuck0' : 'stuck1' });
+    else if (ty.fam === 'coil' || ty.fam === 'lamp' || ty.fam === 'term') cands.push({ c, kind: 'open' });
+  }
+  for (const w of S.doc.wires) cands.push({ w, kind: 'wire' }, { w, kind: 'wire' });
+  if (!cands.length) return null;
+  const f = cands[Math.floor(Math.random() * cands.length)];
+  if (f.kind === 'wire') { setWireBreak(S, f.w.id, true); S.hidden = { wire: f.w.id, desc: 'un filo interrotto' }; }
+  else { S.fx[f.c.id] = f.kind; S.dirty = true; S.hidden = { id: f.c.id, desc: faultDesc(S, f.kind, f.c) }; }
+  S.hiddenShown = false;
+  return S.hidden;
+}
+
+/* ---------- tester ---------- */
+function meterRead(S, vA, vB, mode) {
+  if (vA == null || vB == null || !S.sol) return null;
+  const nA = S.NL.netOf[vA], nB = S.NL.netOf[vB];
+  const V = cabs(csub(nv(S, nA), nv(S, nB)));
+  if (mode === 'V') return { V };
+  if (V > 2) return { err: 'Tensione presente: togli l\'alimentazione prima di misurare la resistenza.', V };
+  if (nA === nB) return { R: 0 };
+  const br = S.br.filter(b => b.t === 'R' && !(b.key && String(b.key).startsWith('sup:')));
+  const inj = {}; inj[nA] = 1; inj[nB] = -1;
+  const sol = solveMNA(S.nNodes, br, inj);
+  return { R: Math.abs(sol.Vre[nA] - sol.Vre[nB]) };
+}
+
+/* ---------- controllo dello schema ---------- */
+function checkDoc(doc) {
+  const out = [], NL = buildNet(doc, null);
+  const coils = {}, masters = {};
+  for (const c of doc.comps) {
+    const ty = TYPES[c.type];
+    if (!ty) continue;
+    const k = tk(c.tag);
+    if (ty.fam === 'coil') { if (coils[k]) out.push({ id: c.id, msg: `Due bobine con la stessa sigla ${c.tag}: i contatti ${c.tag} seguono solo la prima.` }); coils[k] = c; masters[k] = 1; }
+    if (ty.fam === 'prot' && ty.prot !== 'fuse') masters[k] = 1;
+    if (ty.fam === 'cyl') { masters[k + '0'] = 1; masters[k + '1'] = 1; }
+  }
+  for (const c of doc.comps) {
+    const ty = TYPES[c.type];
+    if (!ty) continue;
+    if (!ty.noTag && ty.fam !== 'text' && !String(c.tag || '').trim()) out.push({ id: c.id, msg: `${ty.name} senza sigla.` });
+    if (ty.fam === 'contact' && !ty.man && !masters[tk(c.tag)]) out.push({ id: c.id, msg: `Il contatto ${c.tag || '(senza sigla)'} non ha una bobina o un apparecchio con la stessa sigla: in simulazione non si muoverà.` });
+  }
+  let open = 0; const openIds = new Set();
+  for (const c of doc.comps) {
+    const m = NL.termV[c.id]; if (!m || TYPES[c.type].fam === 'sup') continue;
+    for (const t in m) { const v = m[t]; if (!NL.deg[v] && NL.tcount.get(v) === 1) { open++; openIds.add(c.id); } }
+  }
+  if (open) out.push({ ids: [...openIds], msg: `${open} morsett${open === 1 ? 'o' : 'i'} non collegat${open === 1 ? 'o' : 'i'} (cerchietti arancioni sul foglio).` });
+  return out;
+}
+
+/* =========================================================================
+   QuadroSim — esempi
+   ========================================================================= */
+function newComp(type, x, y, tag, props, rot) {
+  const ty = TYPES[type];
+  return { id: uid('c'), type, x, y, rot: rot || 0, tag: tag == null ? '' : tag, props: Object.assign(JSON.parse(JSON.stringify(ty.props)), props || {}) };
+}
+function exBuild(title, fn) {
+  const doc = { v: 1, title, comps: [], wires: [] };
+  const add = (type, x, y, tag, props, rot) => { const c = newComp(type, x, y, tag, props, rot); doc.comps.push(c); return c; };
+  const w = (...pts) => { doc.wires.push({ id: uid('w'), pts: pts.map(p => [p[0], p[1]]) }); };
+  const T = (c, tid) => termPos(c, TYPES[c.type].terms.find(t => t.id === tid));
+  fn(add, w, T);
+  return doc;
+}
+const EXAMPLES = [];
+
+EXAMPLES.push({
+  id: 'dol', name: 'Marcia-arresto motore trifase', desc: 'Avviamento diretto con autoritenuta, relè termico e spie.',
+  build: () => exBuild('Marcia-arresto motore trifase', (add, w, T) => {
+    const g = add('grid', 100, 40);
+    const q = add('sm', 120, 110, 'Q1', { Ir: 5 });
+    const km = add('km3', 120, 200, 'KM1');
+    const fr = add('ft', 120, 290, 'FR1', { Ir: 4 });
+    const m = add('mot3', 120, 390, 'M1', { In: 4 });
+    for (let i = 0; i < 3; i++) { w(T(g, GRID_P[i]), T(q, 't' + i)); w(T(q, 'b' + i), T(km, 't' + i)); w(T(km, 'b' + i), T(fr, 't' + i)); }
+    w(T(fr, 'b0'), T(m, 'u')); w(T(fr, 'b1'), T(m, 'v')); w(T(fr, 'b2'), T(m, 'w'));
+    const pe = T(g, 'PE'), mpe = T(m, 'pe'); w(pe, [pe[0], mpe[1]], mpe);
+    const l1 = add('sup', 300, 40, '', { pot: 'L1' });
+    const fu = add('fuse', 300, 90, 'FU1', { In: 2 });
+    w(T(l1, 'p'), T(fu, 't0'));
+    w(T(fu, 'b0'), [300, 150], [540, 150]);
+    const f95 = add('thNC', 300, 190, 'FR1'); w([300, 150], T(f95, 'a'));
+    const s0 = add('pbNC', 300, 270, 'S0'); w(T(f95, 'b'), T(s0, 'a'));
+    const s1 = add('pbNO', 300, 350, 'S1'); w(T(s0, 'b'), T(s1, 'a'));
+    const k13 = add('cNO', 360, 350, 'KM1');
+    w([300, 310], [360, 310], T(k13, 'a')); w(T(k13, 'b'), [360, 390], [300, 390]);
+    const coil = add('coil', 300, 450, 'KM1'); w(T(s1, 'b'), T(coil, 'a1'));
+    const n = add('sup', 300, 540, '', { pot: 'N' }, 180); w(T(coil, 'a2'), T(n, 'p'));
+    w([300, 510], [540, 510]);
+    const k23 = add('cNO', 420, 270, 'KM1'); w([420, 150], T(k23, 'a'));
+    const h1 = add('lamp', 420, 450, 'H1', { col: 'GN' }); w(T(k23, 'b'), T(h1, 'x1')); w(T(h1, 'x2'), [420, 510]);
+    const f97 = add('thNO', 540, 190, 'FR1'); w([540, 150], T(f97, 'a'));
+    const h2 = add('lamp', 540, 450, 'H2', { col: 'YE' }); w(T(f97, 'b'), T(h2, 'x1')); w(T(h2, 'x2'), [540, 510]);
+    add('text', 40, 600, '', { text: 'S1 avvia, S0 arresta. Tieni premuto sul motore per simulare un sovraccarico:\nil relè termico FR1 interviene dopo qualche secondo e accende H2.', size: 12 });
+  }),
+});
+
+EXAMPLES.push({
+  id: 'rev', name: 'Teleinvertitore', desc: 'Inversione di marcia con interblocco elettrico tra KM1 e KM2.',
+  build: () => exBuild('Teleinvertitore', (add, w, T) => {
+    const g = add('grid', 120, 40);
+    const q = add('sm', 140, 110, 'Q1', { Ir: 5 });
+    for (let i = 0; i < 3; i++) w(T(g, GRID_P[i]), T(q, 't' + i));
+    const k1 = add('km3', 140, 230, 'KM1');
+    const k2 = add('km3', 280, 230, 'KM2');
+    w(T(q, 'b0'), T(k1, 't0')); w([120, 160], [260, 160], T(k2, 't0'));
+    w(T(q, 'b1'), T(k1, 't1')); w([140, 170], [280, 170], T(k2, 't1'));
+    w(T(q, 'b2'), T(k1, 't2')); w([160, 180], [300, 180], T(k2, 't2'));
+    const fr = add('ft', 140, 330, 'FR1', { Ir: 4 });
+    for (let i = 0; i < 3; i++) w(T(k1, 'b' + i), T(fr, 't' + i));
+    w(T(k2, 'b0'), [260, 270], [160, 270]);
+    w(T(k2, 'b1'), [280, 280], [140, 280]);
+    w(T(k2, 'b2'), [300, 290], [120, 290]);
+    const m = add('mot3', 140, 430, 'M1', { In: 4 });
+    w(T(fr, 'b0'), T(m, 'u')); w(T(fr, 'b1'), T(m, 'v')); w(T(fr, 'b2'), T(m, 'w'));
+    w(T(g, 'PE'), [200, 390], T(m, 'pe'));
+    const l1 = add('sup', 400, 40, '', { pot: 'L1' });
+    const fu = add('fuse', 400, 90, 'FU1', { In: 2 }); w(T(l1, 'p'), T(fu, 't0'));
+    w(T(fu, 'b0'), [400, 150], [760, 150]);
+    const f95 = add('thNC', 400, 190, 'FR1'); w([400, 150], T(f95, 'a'));
+    const s0 = add('pbNC', 400, 270, 'S0'); w(T(f95, 'b'), T(s0, 'a'));
+    w(T(s0, 'b'), [400, 320], [600, 320]);
+    const s1 = add('pbNO', 400, 370, 'S1'); w([400, 320], T(s1, 'a'));
+    const k1a = add('cNO', 460, 370, 'KM1'); w([460, 320], T(k1a, 'a')); w(T(k1a, 'b'), [460, 410], [400, 410]);
+    const k2b = add('cNC', 400, 460, 'KM2'); w(T(s1, 'b'), T(k2b, 'a'));
+    const c1 = add('coil', 400, 540, 'KM1'); w(T(k2b, 'b'), T(c1, 'a1'));
+    const s2 = add('pbNO', 540, 370, 'S2'); w([540, 320], T(s2, 'a'));
+    const k2a = add('cNO', 600, 370, 'KM2'); w([600, 320], T(k2a, 'a')); w(T(k2a, 'b'), [600, 410], [540, 410]);
+    const k1b = add('cNC', 540, 460, 'KM1'); w(T(s2, 'b'), T(k1b, 'a'));
+    const c2 = add('coil', 540, 540, 'KM2'); w(T(k1b, 'b'), T(c2, 'a1'));
+    const k1c = add('cNO', 680, 270, 'KM1'); w([680, 150], T(k1c, 'a'));
+    const h1 = add('lamp', 680, 540, 'H1', { col: 'GN' }); w(T(k1c, 'b'), T(h1, 'x1'));
+    const k2c = add('cNO', 760, 270, 'KM2'); w([760, 150], T(k2c, 'a'));
+    const h2 = add('lamp', 760, 540, 'H2', { col: 'WH' }); w(T(k2c, 'b'), T(h2, 'x1'));
+    const n = add('sup', 400, 630, '', { pot: 'N' }, 180); w(T(c1, 'a2'), T(n, 'p'));
+    w([400, 600], [760, 600]); w(T(c2, 'a2'), [540, 600]); w(T(h1, 'x2'), [680, 600]); w(T(h2, 'x2'), [760, 600]);
+    add('text', 40, 690, '', { text: 'S1 marcia avanti, S2 marcia indietro, S0 arresto. Per invertire devi prima fermare:\nil contatto NC dell\'altro contattore impedisce che KM1 e KM2 si chiudano insieme.', size: 12 });
+  }),
+});
+
+EXAMPLES.push({
+  id: 'yd', name: 'Avviamento stella-triangolo', desc: 'Motore a 6 morsetti, commutazione temporizzata da KT1.',
+  build: () => exBuild('Avviamento stella-triangolo', (add, w, T) => {
+    const g = add('grid', 120, 40);
+    const q = add('sm', 140, 110, 'Q1', { Ir: 10 });
+    const k1 = add('km3', 140, 200, 'KM1');
+    const fr = add('ft', 140, 290, 'FR1', { Ir: 8 });
+    const m = add('mot6', 140, 400, 'M1', { In: 8 });
+    for (let i = 0; i < 3; i++) { w(T(g, GRID_P[i]), T(q, 't' + i)); w(T(q, 'b' + i), T(k1, 't' + i)); w(T(k1, 'b' + i), T(fr, 't' + i)); }
+    w(T(fr, 'b0'), T(m, 'u')); w(T(fr, 'b1'), T(m, 'v')); w(T(fr, 'b2'), T(m, 'w'));
+    const kd = add('km3', 280, 400, 'KM3');
+    w([120, 330], [260, 330], T(kd, 't0')); w([140, 340], [280, 340], T(kd, 't1')); w([160, 350], [300, 350], T(kd, 't2'));
+    w(T(kd, 'b0'), [260, 470], [120, 470], T(m, 'w2'));
+    w(T(kd, 'b1'), [280, 480], [140, 480], T(m, 'u2'));
+    w(T(kd, 'b2'), [300, 490], [160, 490], T(m, 'v2'));
+    const ky = add('km3', 140, 550, 'KM2');
+    w([120, 470], T(ky, 't0')); w([140, 480], T(ky, 't1')); w([160, 490], T(ky, 't2'));
+    w(T(ky, 'b0'), [120, 600], [160, 600], T(ky, 'b2')); w(T(ky, 'b1'), [140, 600]);
+    w(T(g, 'PE'), [200, 360], T(m, 'pe'));
+    const l1 = add('sup', 420, 40, '', { pot: 'L1' });
+    const fu = add('fuse', 420, 90, 'FU1', { In: 2 }); w(T(l1, 'p'), T(fu, 't0'));
+    const f95 = add('thNC', 420, 170, 'FR1'); w(T(fu, 'b0'), T(f95, 'a'));
+    const s0 = add('pbNC', 420, 250, 'S0'); w(T(f95, 'b'), T(s0, 'a'));
+    const s1 = add('pbNO', 420, 330, 'S1'); w(T(s0, 'b'), T(s1, 'a'));
+    const k1a = add('cNO', 480, 330, 'KM1'); w([420, 290], [480, 290], T(k1a, 'a')); w(T(k1a, 'b'), [480, 370], [420, 370]);
+    w(T(s1, 'b'), [420, 400], [720, 400]);
+    const c1 = add('coil', 420, 620, 'KM1'); w([420, 400], T(c1, 'a1'));
+    const kt = add('ton', 520, 620, 'KT1', { t: 4 }); w([520, 400], T(kt, 'a1'));
+    const ktn = add('dNC', 620, 460, 'KT1'); w([620, 400], T(ktn, 'a'));
+    const k3n = add('cNC', 620, 540, 'KM3'); w(T(ktn, 'b'), T(k3n, 'a'));
+    const c2 = add('coil', 620, 620, 'KM2'); w(T(k3n, 'b'), T(c2, 'a1'));
+    const kto = add('dNO', 720, 460, 'KT1'); w([720, 400], T(kto, 'a'));
+    const k2n = add('cNC', 720, 540, 'KM2'); w(T(kto, 'b'), T(k2n, 'a'));
+    const c3 = add('coil', 720, 620, 'KM3'); w(T(k2n, 'b'), T(c3, 'a1'));
+    const n = add('sup', 420, 710, '', { pot: 'N' }, 180); w(T(c1, 'a2'), T(n, 'p'));
+    w([420, 680], [720, 680]); w(T(kt, 'a2'), [520, 680]); w(T(c2, 'a2'), [620, 680]); w(T(c3, 'a2'), [720, 680]);
+    add('text', 40, 760, '', { text: 'S1 avvia: KM1 e KM2 chiudono il motore a stella. Dopo 4 s KT1 apre KM2 e chiude KM3 (triangolo).\nKM2 e KM3 sono interbloccati con i rispettivi contatti NC.', size: 12 });
+  }),
+});
+
+EXAMPLES.push({
+  id: 'civ', name: 'Luce da tre punti e relè passo-passo', desc: 'Impianto civile: deviatori, invertitore, relè passo-passo.',
+  build: () => exBuild('Luce da tre punti e relè passo-passo', (add, w, T) => {
+    const l = add('sup', 100, 40, '', { pot: 'L1' });
+    const s1 = add('dev', 100, 120, 'S1', {}, 180); w(T(l, 'p'), T(s1, 'c'));
+    const s2 = add('inv', 100, 230, 'S2'); w(T(s1, 'nc'), T(s2, 'a1')); w(T(s1, 'no'), T(s2, 'a2'));
+    const s3 = add('dev', 100, 330, 'S3'); w(T(s2, 'b1'), T(s3, 'no')); w(T(s2, 'b2'), T(s3, 'nc'));
+    const h = add('lamp', 100, 420, 'H1', { col: 'YE' }); w(T(s3, 'c'), T(h, 'x1'));
+    const n = add('sup', 100, 480, '', { pot: 'N' }, 180); w(T(h, 'x2'), T(n, 'p'));
+    const l2 = add('sup', 300, 40, '', { pot: 'L1' });
+    const p1 = add('pbNO', 300, 120, 'S4'); w(T(l2, 'p'), T(p1, 'a'));
+    const p2 = add('pbNO', 380, 120, 'S5'); w([300, 60], [380, 60], T(p2, 'a')); w(T(p2, 'b'), [380, 170], [300, 170]);
+    const kp = add('pp', 300, 230, 'KP1'); w(T(p1, 'b'), T(kp, 'a1'));
+    const n2 = add('sup', 300, 300, '', { pot: 'N' }, 180); w(T(kp, 'a2'), T(n2, 'p'));
+    const l3 = add('sup', 480, 40, '', { pot: 'L1' });
+    const kpc = add('cNO', 480, 120, 'KP1'); w(T(l3, 'p'), T(kpc, 'a'));
+    const h2 = add('lamp', 480, 230, 'H2', { col: 'WH' }); w(T(kpc, 'b'), T(h2, 'x1'));
+    const n3 = add('sup', 480, 300, '', { pot: 'N' }, 180); w(T(h2, 'x2'), T(n3, 'p'));
+    add('text', 40, 560, '', { text: 'A sinistra: tocca S1, S2 o S3, ogni comando inverte lo stato di H1.\nA destra: ogni impulso su S4 o S5 fa scattare il relè passo-passo KP1.', size: 12 });
+  }),
+});
+
+EXAMPLES.push({
+  id: 'rcd', name: 'Guasto a massa e differenziale', desc: 'Sicurezza: messa a terra, differenziale 30 mA, massa in tensione, contatto indiretto.',
+  build: () => exBuild('Guasto a massa e differenziale', (add, w, T) => {
+    const l = add('sup', 100, 40, '', { pot: 'L1' }), nn = add('sup', 120, 40, '', { pot: 'N' }), pe = add('sup', 220, 40, '', { pot: 'PE' });
+    const q1 = add('id2', 110, 110, 'Q1', { In: 16, Idn: 0.03, mt: true });
+    w(T(l, 'p'), T(q1, 't0')); w(T(nn, 'p'), T(q1, 't1'));
+    const m1 = add('mot1', 110, 220, 'M1', { In: 2 });
+    w(T(q1, 'b0'), T(m1, 'u1')); w(T(q1, 'b1'), T(m1, 'u2'));
+    w(T(pe, 'p'), [220, 160], [140, 160], T(m1, 'pe'));
+    const l2 = add('sup', 380, 40, '', { pot: 'L1' }), n2 = add('sup', 400, 40, '', { pot: 'N' });
+    const q2 = add('mt2', 390, 110, 'Q2', { In: 16 });
+    w(T(l2, 'p'), T(q2, 't0')); w(T(n2, 'p'), T(q2, 't1'));
+    const m2 = add('mot1', 390, 220, 'M2', { In: 2 });
+    w(T(q2, 'b0'), T(m2, 'u1')); w(T(q2, 'b1'), T(m2, 'u2'));
+    add('text', 40, 300, '', { text: 'M1: carcassa collegata al PE, protetto da differenziale 30 mA.\nM2: nessun conduttore di protezione, solo magnetotermico.\n\nIn simulazione tieni premuto su un motore e scegli «Guasto a massa»,\npoi «Una persona tocca la carcassa»: confronta cosa succede su M1 e su M2.', size: 12 });
+  }),
+});
+
+EXAMPLES.push({
+  id: 'cyl', name: 'Cilindro elettropneumatico A+ A−', desc: 'Ciclo singolo a 24 V c.c. con finecorsa a0 e a1.',
+  build: () => exBuild('Cilindro elettropneumatico A+ A−', (add, w, T) => {
+    const p = add('sup', 100, 40, '', { pot: 'P24' });
+    const s1 = add('pbNO', 100, 130, 'S1'); w(T(p, 'p'), T(s1, 'a'));
+    w([100, 60], [220, 60]);
+    const a0 = add('limNO', 100, 210, 'a0'); w(T(s1, 'b'), T(a0, 'a'));
+    const ka = add('cNO', 160, 170, 'KA1'); w([100, 80], [160, 80], T(ka, 'a')); w(T(ka, 'b'), [160, 260], [100, 260]);
+    const a1 = add('limNC', 100, 320, 'a1'); w(T(a0, 'b'), T(a1, 'a'));
+    const c = add('rcoil', 100, 420, 'KA1'); w(T(a1, 'b'), T(c, 'a1'));
+    const z = add('sup', 100, 500, '', { pot: 'M0' }, 180); w(T(c, 'a2'), T(z, 'p'));
+    w([100, 480], [220, 480]);
+    const ka2 = add('cNO', 220, 210, 'KA1'); w([220, 60], T(ka2, 'a'));
+    const y1 = add('yv', 220, 420, 'Y1'); w(T(ka2, 'b'), T(y1, 'a1')); w(T(y1, 'a2'), [220, 480]);
+    add('cyl', 420, 250, 'A', { yp: 'Y1', ym: '', ts: 2 });
+    add('text', 40, 560, '', { text: 'Premi S1: il cilindro A esce; quando tocca il finecorsa a1 rientra da solo.\nI finecorsa a0 e a1 sono comandati dalla posizione dello stelo.', size: 12 });
+  }),
+});
+
+/* =========================================================================
+   QuadroSim — disegno SVG (funzioni pure: stato -> stringa SVG)
+   ========================================================================= */
+
+/* numerazione automatica dei contatti ausiliari (IEC 60947): per ogni sigla,
+   in ordine da sinistra a destra: NA x3-x4, NC x1-x2, temporizzati NA x7-x8 / NC x5-x6 */
+function contactNums(doc) {
+  const by = {};
+  for (const c of doc.comps) {
+    const ty = TYPES[c.type];
+    if (!ty || ty.fam !== 'contact' || ty.kind === 'NO3' || ty.kind === 'INV' || ty.fixedNums) continue;
+    const k = tk(c.tag); (by[k] = by[k] || []).push(c);
+  }
+  const out = {};
+  for (const k in by) {
+    by[k].sort((a, b) => a.x - b.x || a.y - b.y).forEach((c, i) => {
+      const n = i + 1, ty = TYPES[c.type];
+      if (ty.kind === 'CO') out[c.id] = [n + '1', n + '4', n + '2'];
+      else if (ty.delayed) out[c.id] = ty.kind === 'NO' ? [n + '7', n + '8'] : [n + '5', n + '6'];
+      else out[c.id] = ty.kind === 'NO' ? [n + '3', n + '4'] : [n + '1', n + '2'];
+    });
+  }
+  return out;
+}
+function coilVariants(doc) {
+  const m = {};
+  for (const c of doc.comps) { const ty = TYPES[c.type]; if (ty && ty.fam === 'coil') { const k = tk(c.tag); if (!m[k]) m[k] = ty.variant; } }
+  return m;
+}
+function termLabels(c, ctx) {
+  const ty = TYPES[c.type];
+  if (ty.tnum) return ty.tnum(c);
+  if (ty.fixedNums) return ty.fixedNums;
+  if (ty.fam === 'contact' && ctx.nums && ctx.nums[c.id]) return ctx.nums[c.id];
+  return ty.terms.map(t => (t.n == null ? '' : t.n));
+}
+const compRot = c => (TYPES[c.type].norot ? 0 : c.rot || 0);
+
+function textEl(x, y, s, cls, anchor, fs) {
+  return `<text x="${f2(x)}" y="${f2(y)}"${cls ? ` class="${cls}"` : ''}${anchor && anchor !== 'start' ? ` text-anchor="${anchor}"` : ''}${fs ? ` style="font-size:${fs}px"` : ''}>${esc(s)}</text>`;
+}
+/* testi del simbolo: restano sempre orizzontali, la posizione ruota con il simbolo */
+function symText(c, t) {
+  const rot = compRot(c);
+  const [dx, dy] = rotPt(t.x, t.y, rot);
+  let X = c.x + dx, Y = c.y + dy, a = t.a || 'middle';
+  if (t.side) {
+    const [ox, oy] = rotPt(t.x - (t.rx || 0), t.y - (t.ry || 0), rot);
+    if (Math.abs(ox) >= Math.abs(oy)) a = ox < 0 ? 'end' : 'start';
+    else { a = 'middle'; if (oy > 0) Y += (t.fs || 11) * 0.8; }
+  }
+  return textEl(X, Y, t.s, t.cls, a, t.fs);
+}
+/* sigla e dati principali, a lato del simbolo (sopra/sotto se ruotato) */
+function tagBlock(c, ctx) {
+  const ty = TYPES[c.type];
+  if (ty.noTag) return '';
+  const lines = [];
+  const tg = ty.labelText ? ty.labelText(c) : c.tag || '';
+  if (tg) lines.push([tg, 'lb']);
+  const inf = ty.info ? ty.info(c) : '';
+  if (inf && ctx.info !== false) lines.push([inf, 'li']);
+  if (!lines.length) return '';
+  const b = ty.boxOf ? ty.boxOf(c) : ty.box, rot = compRot(c);
+  const [ox, oy] = rotPt(b[0] - 3, lines.length > 1 ? -1 : 4, rot);
+  let X = c.x + ox, Y = c.y + oy, a, step = 10.5;
+  if (Math.abs(ox) >= Math.abs(oy)) a = ox < 0 ? 'end' : 'start';
+  else { a = 'middle'; if (oy < 0) Y -= (lines.length - 1) * step; else Y += 9; }
+  return lines.map((l, i) => textEl(X, Y + i * step, l[0], l[1], a)).join('');
+}
+function termLabelSVG(c, ctx) {
+  const ty = TYPES[c.type], labs = termLabels(c, ctx), rot = compRot(c);
+  let s = '';
+  ty.terms.forEach((t, i) => {
+    const txt = labs[i];
+    if (!txt) return;
+    const inward = t.y < 0 ? 1 : t.y > 0 ? -1 : 0;
+    const [tx, ty2] = termPos(c, t);
+    if (rot === 0 || rot === 180) {
+      const [dx, dy] = rotPt(3.5, inward * 8 + (inward > 0 ? 1 : 0), rot);
+      s += textEl(tx + dx, ty2 + dy + (rot === 180 && inward > 0 ? 3 : 0), txt, 'tn', dx >= 0 ? 'start' : 'end');
+    } else {
+      const [dx] = rotPt(0, inward * 7, rot);
+      s += textEl(tx + dx, ty2 + 8.5, txt, 'tn', 'middle');
+    }
+  });
+  return s;
+}
+
+/* stato visivo di un componente durante la simulazione */
+function visOf(S, c) {
+  if (!S) return null;
+  const ty = TYPES[c.type], v = {};
+  const hiddenHere = S.hidden && S.hidden.id === c.id && !S.hiddenShown;
+  v.fx = !!S.fx[c.id] && !hiddenHere;
+  switch (ty.fam) {
+    case 'contact':
+      v.act = actuated(S, c);
+      if (ty.kind === 'CO' || ty.kind === 'INV') v.closed = S.fx[c.id] === 'stuck1' ? true : v.act;
+      else v.closed = contactClosed(S, c);
+      break;
+    case 'coil': {
+      const ld = S.ld[c.id], co = S.co[tk(c.tag)];
+      v.en = ld.on; v.burnt = ld.burnt || (S.fx[c.id] === 'open' && !hiddenHere);
+      if (co) { v.acc = co.acc; v.dact = co.dact; }
+      break;
+    }
+    case 'prot': {
+      const st = S.pd[c.id];
+      v.on = st.on; v.trip = st.trip; v.heat = st.heat; v.blown = st.blown;
+      if (ty.prot === 'fuse') v.heat = Math.max(...st.hp);
+      break;
+    }
+    case 'lamp': { const ld = S.ld[c.id]; v.on = ld.on; v.dim = ld.dim; v.burnt = ld.burnt || (S.fx[c.id] === 'open' && !hiddenHere); break; }
+    case 'motor': { const m = S.mo[c.id]; Object.assign(v, { st: m.st, spin: m.speed > 0.01, dir: m.dir, conn: m.conn }); v.fx = v.fx || m.ol || m.lock || !!m.earth || m.openW; break; }
+    case 'xf': { const ld = S.ld[c.id]; v.on = ld.on; v.burnt = ld.burnt; break; }
+    case 'cyl': { const cy = S.cy[tk(c.tag)]; v.pos = cy ? cy.pos : 0; break; }
+  }
+  return v;
+}
+
+/* note di stato accanto ai componenti in simulazione */
+function simNotes(S, c) {
+  const ty = TYPES[c.type], b = compBox(c), notes = [];
+  if (ty.fam === 'motor') {
+    const m = S.mo[c.id];
+    if (m.st === 'run') notes.push([(m.dir > 0 ? '↻ orario' : '↺ antiorario') + (m.conn ? (m.conn === 'Y' ? ', stella' : ', triangolo') : ''), 'sn ok']);
+    else if (m.st === 'stall') notes.push(['bloccato', 'sn warn']);
+    if (m.ol) notes.push(['sovraccarico', 'sn warn']);
+    if (m.frameV > 50) notes.push([`massa a ${Math.round(m.frameV)} V`, 'sn err']);
+    if (m.touch) notes.push([`persona: ${fmtA(m.bodyI)}`, m.bodyLv === 2 ? 'sn err' : m.bodyLv === 1 ? 'sn warn' : 'sn ok']);
+  } else if (ty.fam === 'prot') {
+    const st = S.pd[c.id];
+    if (ty.prot === 'fuse' && st.blown.some(x => x)) notes.push(['interrotto', 'sn err']);
+    else if (st.trip && ty.prot === 'ft') notes.push(['intervenuto', 'sn err']);
+    else if (st.trip) notes.push(['scattato', 'sn err']);
+    else if (ty.prot !== 'fuse' && ty.prot !== 'ft' && !st.on) notes.push(['aperto', 'sn']);
+  } else if (ty.fam === 'coil' && S.ld[c.id].burnt) notes.push(['bruciata', 'sn err']);
+  else if (ty.fam === 'lamp' && S.ld[c.id].burnt) notes.push(['bruciata', 'sn err']);
+  else if (ty.fam === 'xf' && S.ld[c.id].burnt) notes.push(['guasto', 'sn err']);
+  if (ty.fam === 'coil' && (ty.variant === 'ton' || ty.variant === 'tof')) {
+    const co = S.co[tk(c.tag)], T = +c.props.t || 0;
+    const rest = co ? Math.max(0, T - co.acc).toFixed(1).replace('.', ',') + ' s' : '';
+    if (co && ty.variant === 'ton' && co.en && !co.dact) notes.push([rest, 'sn']);
+    if (co && ty.variant === 'tof' && !co.en && co.dact) notes.push([rest, 'sn']);
+  }
+  if (!notes.length) return '';
+  const x = (b[0] + b[2]) / 2, y = b[3] + 11;
+  return notes.map((n, i) => textEl(x, y + i * 10, n[0], n[1], 'middle')).join('');
+}
+
+function compSVG(c, ctx, v) {
+  const ty = TYPES[c.type];
+  if (!ty) return '';
+  const d = ty.draw(c, v, { delayKind: ctx.cv ? ctx.cv[tk(c.tag)] : null });
+  const rot = compRot(c), sel = ctx.sel && ctx.sel.has(c.id), hl = ctx.hl === c.id;
+  let s = `<g class="cp" transform="translate(${c.x},${c.y})${rot ? ` rotate(${rot})` : ''}">`;
+  if (sel || hl) { const b = ty.boxOf ? ty.boxOf(c) : ty.box; s += RC(b[0] - 4, b[1] - 4, b[2] - b[0] + 8, b[3] - b[1] + 8, hl ? 'hlbox' : 'selbox'); }
+  s += d.g + '</g>';
+  for (const t of d.tx) s += symText(c, t);
+  s += tagBlock(c, ctx);
+  if (ctx.tnums !== false) s += termLabelSVG(c, ctx);
+  if (ctx.S) s += simNotes(ctx.S, c);
+  return s;
+}
+function renderCtx(doc, o) {
+  return { nums: contactNums(doc), cv: coilVariants(doc), sel: o.sel || new Set(), S: o.S || null, hl: o.hl || null, info: o.info, tnums: o.tnums };
+}
+
+/* fili, pallini di giunzione e morsetti liberi */
+function wireLayer(doc, o) {
+  const S = o.S || null, NL = o.NL, sel = o.sel || new Set();
+  let wires = '', halo = '';
+  if (!S) {
+    for (const w of doc.wires) {
+      const pts = w.pts.map(p => p[0] + ',' + p[1]).join(' ');
+      if (sel.has(w.id)) halo += `<polyline points="${pts}" class="wh"/>`;
+      wires += `<polyline points="${pts}" class="w"/>`;
+    }
+  } else {
+    const V = NL.vPos, cls = S.netCls || [], eI = S.edgeI;
+    NL.edges.forEach((e, k) => {
+      const a = V[e.a], b = V[e.b], n = NL.netOf[e.a], cc = cls[n] || '';
+      const I = eI ? eI[k] : 0;
+      const c2 = 'w' + (cc ? ' ' + cc : '') + (I > 0.0005 && cc !== 'short' ? ' cur' : '');
+      wires += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="${c2}"/>`;
+    });
+    for (const w of doc.wires) {
+      if (!S.wfx.has(w.id)) continue;
+      const hidden = S.hidden && S.hidden.wire === w.id && !S.hiddenShown;
+      const pts = w.pts.map(p => p[0] + ',' + p[1]).join(' ');
+      wires += `<polyline points="${pts}" class="w${hidden ? '' : ' brk'}"/>`;
+      if (!hidden) { const i = Math.floor((w.pts.length - 1) / 2), p = w.pts[i], q = w.pts[i + 1]; wires += CI((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 4.5, 'brkm'); }
+    }
+  }
+  let dots = '';
+  if (NL) {
+    NL.vPos.forEach((p, i) => { if (NL.deg[i] + (NL.tcount.get(i) || 0) >= 3 && NL.deg[i] >= 2) dots += CI(p[0], p[1], 2.7, 'jd'); });
+    if (!S && o.hints !== false) {
+      for (const c of doc.comps) {
+        const m = NL.termV[c.id]; if (!m || TYPES[c.type].fam === 'sup') continue;
+        for (const t in m) { const v = m[t]; if (!NL.deg[v] && NL.tcount.get(v) === 1) { const p = NL.vPos[v]; dots += CI(p[0], p[1], 3.2, 'ot'); } }
+      }
+    }
+  }
+  return halo + wires + dots;
+}
+
+/* disegno completo del foglio (stampa) */
+function renderDoc(doc, o) {
+  const ctx = renderCtx(doc, o);
+  let comps = '';
+  for (const c of doc.comps) comps += compSVG(c, ctx, visOf(o.S, c));
+  return wireLayer(doc, o) + comps;
+}
+
+function docBounds(doc) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of doc.comps) { const b = compBox(c); x0 = Math.min(x0, b[0] - 40); y0 = Math.min(y0, b[1] - 16); x1 = Math.max(x1, b[2] + 10); y1 = Math.max(y1, b[3] + 22); }
+  for (const w of doc.wires) for (const p of w.pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  if (!isFinite(x0)) return null;
+  return [x0, y0, x1, y1];
+}
+
+/* anteprima di un simbolo per la tavolozza */
+function paletteSVG(entry) {
+  const ty = TYPES[entry.type];
+  const c = { id: 'pv', type: entry.type, x: 0, y: 0, rot: 0, tag: '', props: Object.assign({}, ty.props, entry.props || {}) };
+  if (entry.type === 'text') return '<svg viewBox="0 0 40 40" class="pv sch" aria-hidden="true"><text x="20" y="27" text-anchor="middle" class="note" style="font-size:22px">Aa</text></svg>';
+  const b = ty.box, pad = 5;
+  const d = ty.draw(c, null, {});
+  let tx = '';
+  for (const t of d.tx) tx += symText(c, t);
+  const w = b[2] - b[0] + pad * 2, h = b[3] - b[1] + pad * 2;
+  return `<svg viewBox="${b[0] - pad} ${b[1] - pad} ${w} ${h}" class="pv sch" aria-hidden="true">${d.g}${tx}</svg>`;
+}
+
+/* =========================================================================
+   QuadroSim — interfaccia: editor touch, simulazione, file
+   ========================================================================= */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const SVGNS = 'http://www.w3.org/2000/svg';
+const DT = 0.02;
+const LS_AUTO = 'quadrosim.auto.v1', LS_ARCH = 'quadrosim.archivio.v1';
+const store = {
+  get(k) { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+};
+const mq = q => { try { return window.matchMedia(q).matches; } catch (e) { return false; } };
+const isNarrow = () => mq('(max-width: 960px)');
+const isTouch = mq('(pointer: coarse)');
+const RM = mq('(prefers-reduced-motion: reduce)');
+const EMBED = !!(window.claude && typeof window.claude.use === 'function');
+let DL = null; // salvataggio dei file quando la pagina gira dentro claude.ai
+if (EMBED) { try { window.claude.use('downloads').then(ns => { DL = ns; }, () => {}); } catch (e) { /* niente */ } }
+
+const A = {
+  doc: null, saved: '', undo: [], redo: [],
+  view: { z: 1, tx: 60, ty: 60 },
+  tool: 'sel', sel: new Set(), armed: null, chain: null, cat: 'cmd',
+  prev: null, snapMk: null, band: null, ghost: null,
+  S: null, simTool: 'cmd', probes: { r: null, b: null }, mMode: 'V', mKey: '', rot: {}, pressed: new Map(),
+  NL: null, lastFrame: 0, acc: 0, needRender: false, haltShown: false, hiddenTries: 0, wKey: '',
+};
+
+const cv = $('#cv'), world = $('#world'), stage = $('#stage');
+const mk = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const Lw = mk('g'), Lc = mk('g'), Lo = mk('g', { class: 'ov' });
+world.append(Lw, Lc, Lo);
+const compEls = new Map(), compStr = new Map();
+
+/* =========================================================================
+   Documento
+   ========================================================================= */
+const getComp = id => A.doc.comps.find(c => c.id === id);
+const getWire = id => A.doc.wires.find(w => w.id === id);
+const newDoc = () => ({ v: 1, title: 'Schema senza titolo', comps: [], wires: [] });
+const snapshot = () => JSON.stringify(A.doc);
+
+function simplify(p) {
+  const out = [];
+  for (const q of p) { const l = out[out.length - 1]; if (l && l[0] === q[0] && l[1] === q[1]) continue; out.push([q[0], q[1]]); }
+  for (let i = 1; i < out.length - 1;) {
+    const a = out[i - 1], b = out[i], c = out[i + 1];
+    if ((a[0] === b[0] && b[0] === c[0]) || (a[1] === b[1] && b[1] === c[1])) out.splice(i, 1); else i++;
+  }
+  return out;
+}
+const segLen = p => { let s = 0; for (let i = 0; i < p.length - 1; i++) s += Math.abs(p[i + 1][0] - p[i][0]) + Math.abs(p[i + 1][1] - p[i][1]); return s; };
+function cleanWires() { A.doc.wires = A.doc.wires.filter(w => { w.pts = simplify(w.pts); return w.pts.length >= 2 && segLen(w.pts) > 0; }); }
+function distSeg(x, y, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+  const t = l2 ? clamp(((x - a[0]) * dx + (y - a[1]) * dy) / l2, 0, 1) : 0;
+  return Math.hypot(a[0] + t * dx - x, a[1] + t * dy - y);
+}
+
+/* sposta un estremo di un filo mantenendo i tratti ortogonali (end: 0 primo punto, 1 ultimo) */
+function dragEnd(orig, end, np) {
+  let p = orig.map(q => [q[0], q[1]]);
+  if (end) p.reverse();
+  const a = p[0], b = p[1];
+  np = [np[0], np[1]];
+  if (p.length === 2) {
+    if (np[0] === b[0] || np[1] === b[1]) p = [np, b];
+    else if (a[0] === b[0]) { const ym = snap((np[1] + b[1]) / 2); p = [np, [np[0], ym], [b[0], ym], b]; }
+    else { const xm = snap((np[0] + b[0]) / 2); p = [np, [xm, np[1]], [xm, b[1]], b]; }
+  } else {
+    if (a[0] === b[0]) p[1] = [np[0], b[1]];
+    else if (a[1] === b[1]) p[1] = [b[0], np[1]];
+    p[0] = np;
+  }
+  if (end) p.reverse();
+  return simplify(p);
+}
+
+/* percorso ortogonale tra due punti; dir: 'v' o 'h' = direzione con cui il filo esce dal punto */
+function autoRoute(a, b, first) {
+  const P0 = [a.x, a.y], P1 = [b.x, b.y];
+  if (a.x === b.x || a.y === b.y) return [P0, P1];
+  const ad = first || a.dir, bd = b.dir;
+  if (ad === 'v' && bd === 'v') { const ym = snap((a.y + b.y) / 2); return simplify([P0, [a.x, ym], [b.x, ym], P1]); }
+  if (ad === 'h' && bd === 'h') { const xm = snap((a.x + b.x) / 2); return simplify([P0, [xm, a.y], [xm, b.y], P1]); }
+  const vFirst = ad ? ad === 'v' : bd ? bd === 'h' : Math.abs(b.y - a.y) >= Math.abs(b.x - a.x);
+  return vFirst ? [P0, [a.x, b.y], P1] : [P0, [b.x, a.y], P1];
+}
+const termDir = c => ((c.rot || 0) % 180 ? 'h' : 'v');
+
+/* un simbolo posato sopra un filo lo interrompe tra i propri morsetti */
+function insertIntoWires(comps) {
+  let changed = false;
+  for (const c of comps) {
+    const ty = TYPES[c.type];
+    if (!ty.terms.length) continue;
+    const pairs = [];
+    for (let i = 0; i < ty.terms.length; i++) for (let j = i + 1; j < ty.terms.length; j++) {
+      const a = ty.terms[i], b = ty.terms[j];
+      if (a.x === b.x && a.y * b.y < 0) pairs.push([termPos(c, a), termPos(c, b)]);
+    }
+    for (const [pa, pb] of pairs) {
+      for (const w of A.doc.wires.slice()) {
+        const p = w.pts;
+        for (let k = 0; k < p.length - 1; k++) {
+          const ta = onSeg(pa[0], pa[1], p[k][0], p[k][1], p[k + 1][0], p[k + 1][1]);
+          const tb = onSeg(pb[0], pb[1], p[k][0], p[k][1], p[k + 1][0], p[k + 1][1]);
+          if (ta < 0 || tb < 0) continue;
+          const [first, second] = ta < tb ? [pa, pb] : [pb, pa];
+          const w1 = simplify([...p.slice(0, k + 1), first]);
+          const w2 = simplify([second, ...p.slice(k + 1)]);
+          const repl = [];
+          if (w1.length >= 2 && segLen(w1) > 0) repl.push({ id: w.id, pts: w1 });
+          if (w2.length >= 2 && segLen(w2) > 0) repl.push({ id: uid('w'), pts: w2 });
+          A.doc.wires.splice(A.doc.wires.indexOf(w), 1, ...repl);
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
+function nextTag(prefix, extra) {
+  if (!prefix) return '';
+  const re = new RegExp('^' + prefix + '(\\d+)$', 'i'); let n = 0;
+  for (const c of A.doc.comps.concat(extra || [])) { const m = re.exec(String(c.tag).trim()); if (m) n = Math.max(n, +m[1]); }
+  return prefix + (n + 1);
+}
+function defaultTag(entry) {
+  const ty = TYPES[entry.type];
+  if (ty.noTag) return '';
+  if (entry.cat === 'pneu' && ty.act === 'lim') {
+    const cy = A.doc.comps.filter(c => c.type === 'cyl');
+    const base = cy.length ? String(cy[cy.length - 1].tag || 'A').toLowerCase() : 'a';
+    const used = new Set(A.doc.comps.map(c => tk(c.tag)));
+    for (let i = 0; i < 2; i++) if (!used.has(tk(base + i))) return base + i;
+    return base + '0';
+  }
+  if (ty.fam === 'contact' && ty.link) {
+    const pick = f => {
+      const s = A.doc.comps.find(c => A.sel.has(c.id) && f(c));
+      if (s) return s.tag;
+      const l = A.doc.comps.filter(f);
+      return l.length ? l[l.length - 1].tag : null;
+    };
+    let t = null;
+    if (ty.link === 'coil') t = pick(c => TYPES[c.type].fam === 'coil' && (entry.type !== 'km3' || TYPES[c.type].variant === 'km'));
+    else if (ty.link === 'timer') t = pick(c => c.type === 'ton' || c.type === 'tof');
+    else if (ty.link === 'therm') t = pick(c => c.type === 'ft');
+    return t || ty.prefix + '1';
+  }
+  return nextTag(ty.prefix);
+}
+
+function normDoc(d) {
+  const doc = { v: 1, title: String(d.title || 'Schema senza titolo').slice(0, 80), comps: [], wires: [] };
+  const ids = new Set();
+  const fresh = (id, p) => { id = String(id || ''); if (!id || ids.has(id)) id = uid(p); ids.add(id); return id; };
+  for (const c of d.comps || []) {
+    if (!c || !TYPES[c.type]) continue;
+    const ty = TYPES[c.type];
+    doc.comps.push({
+      id: fresh(c.id, 'c'), type: c.type, x: snap(+c.x || 0), y: snap(+c.y || 0),
+      rot: [0, 90, 180, 270].includes(+c.rot) ? +c.rot : 0, tag: String(c.tag == null ? '' : c.tag).slice(0, 24),
+      props: Object.assign(JSON.parse(JSON.stringify(ty.props)), c.props && typeof c.props === 'object' ? c.props : {}),
+    });
+  }
+  for (const w of d.wires || []) {
+    if (!w || !Array.isArray(w.pts)) continue;
+    const pts = simplify(w.pts.filter(p => Array.isArray(p) && p.length >= 2).map(p => [snap(+p[0] || 0), snap(+p[1] || 0)]));
+    if (pts.length >= 2 && segLen(pts) > 0) doc.wires.push({ id: fresh(w.id, 'w'), pts });
+  }
+  return doc;
+}
+
+/* ---------- annulla / ripeti / salvataggio automatico ---------- */
+let autoT = 0;
+function autosave() { clearTimeout(autoT); autoT = setTimeout(() => store.set(LS_AUTO, A.doc), 250); }
+function updUndo() { $('#b-undo').disabled = !A.undo.length; $('#b-redo').disabled = !A.redo.length; }
+function commit() {
+  const s = snapshot();
+  if (s === A.saved) return;
+  A.undo.push(A.saved); if (A.undo.length > 150) A.undo.shift();
+  A.redo = []; A.saved = s; autosave(); updUndo();
+}
+function restore(s) {
+  A.doc = JSON.parse(s); A.saved = s;
+  autosave(); updUndo(); render(); showProps();
+}
+function undo() { if (A.S || !A.undo.length) return; cancelChain(); A.redo.push(A.saved); restore(A.undo.pop()); }
+function redo() { if (A.S || !A.redo.length) return; cancelChain(); A.undo.push(A.saved); restore(A.redo.pop()); }
+function loadDoc(d, undoable) {
+  if (A.S) simStop();
+  cancelChain(); armEntry(null);
+  const prev = A.saved;
+  A.doc = normDoc(d); A.sel.clear();
+  if (undoable && prev && prev !== snapshot()) { A.undo.push(prev); A.redo = []; }
+  A.saved = snapshot(); autosave(); updUndo();
+  render(); showProps();
+  requestAnimationFrame(fitView);
+}
+
+/* =========================================================================
+   Vista: spostamento e zoom
+   ========================================================================= */
+function applyView() {
+  const { z, tx, ty } = A.view;
+  world.setAttribute('transform', `translate(${f2(tx)},${f2(ty)}) scale(${z})`);
+  const M = 50 * z, m = z >= 0.6 ? 10 * z : M;
+  stage.style.backgroundSize = `${M}px ${M}px, ${M}px ${M}px, ${m}px ${m}px, ${m}px ${m}px`;
+  stage.style.backgroundPosition = `${f2(tx)}px ${f2(ty)}px`;
+  $('#zlab').textContent = Math.round(z * 100) + '%';
+  renderOverlay();
+}
+function toWorld(cx, cy) { const r = cv.getBoundingClientRect(); return [(cx - r.left - A.view.tx) / A.view.z, (cy - r.top - A.view.ty) / A.view.z]; }
+function zoomAt(cx, cy, z2) {
+  z2 = clamp(z2, 0.25, 4);
+  const r = cv.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;
+  const wx = (px - A.view.tx) / A.view.z, wy = (py - A.view.ty) / A.view.z;
+  A.view.z = z2; A.view.tx = px - wx * z2; A.view.ty = py - wy * z2; applyView();
+}
+function zoomCenter(f) { const r = cv.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, A.view.z * f); }
+function fitView() {
+  const b = docBounds(A.doc), r = cv.getBoundingClientRect();
+  if (!b || !r.width) { A.view = { z: 1, tx: 60, ty: 60 }; applyView(); return; }
+  const pad = 28, w = Math.max(80, b[2] - b[0]), h = Math.max(80, b[3] - b[1]);
+  const z = clamp(Math.min((r.width - pad * 2) / w, (r.height - pad * 2) / h), 0.3, 1.6);
+  A.view.z = z; A.view.tx = (r.width - w * z) / 2 - b[0] * z; A.view.ty = (r.height - h * z) / 2 - b[1] * z;
+  applyView();
+}
+
+/* =========================================================================
+   Disegno sullo schermo
+   ========================================================================= */
+let wireStr = '';
+function render() {
+  const doc = A.doc, S = A.S;
+  let wkey = null;
+  if (S) wkey = S.solN + '|' + [...S.wfx].join(',') + '|' + (S.hiddenShown ? 1 : 0) + '|' + (S.hidden ? S.hidden.wire || '' : '');
+  if (!S || wkey !== A.wKey) {
+    A.NL = S ? S.NL : buildNet(doc, null);
+    const ws = wireLayer(doc, { S, NL: A.NL, sel: S ? null : A.sel });
+    if (ws !== wireStr) { Lw.innerHTML = ws; wireStr = ws; }
+    A.wKey = wkey;
+  }
+  const ctx = renderCtx(doc, { S, sel: S ? null : A.sel, hl: S && S.hidden && S.hiddenShown ? S.hidden.id : null });
+  const seen = new Set();
+  for (const c of doc.comps) {
+    const s = compSVG(c, ctx, visOf(S, c));
+    let el = compEls.get(c.id);
+    if (!el) { el = mk('g', { 'data-id': c.id }); Lc.appendChild(el); compEls.set(c.id, el); compStr.set(c.id, null); }
+    if (compStr.get(c.id) !== s) { el.innerHTML = s; compStr.set(c.id, s); }
+    seen.add(c.id);
+  }
+  for (const [id, el] of compEls) if (!seen.has(id)) { el.remove(); compEls.delete(id); compStr.delete(id); }
+  renderOverlay();
+  $('#empty').hidden = !!(S || doc.comps.length || doc.wires.length);
+}
+function renderOverlay() {
+  const z = A.view.z; let s = '';
+  const poly = (pts, cls) => `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" class="${cls}"/>`;
+  if (!A.S) {
+    if (A.tool === 'sel') for (const id of A.sel) {
+      const w = getWire(id); if (!w) continue;
+      for (const p of [w.pts[0], w.pts[w.pts.length - 1]]) s += RC(p[0] - 5 / z, p[1] - 5 / z, 10 / z, 10 / z, 'weh');
+    }
+    if (A.chain) { s += poly(A.chain.pts, 'pv-w'); for (const p of A.chain.pts) s += CI(p[0], p[1], 3.5 / z, 'pv-p'); }
+    if (A.prev) s += poly(A.prev, 'pv-w');
+    if (A.snapMk) s += CI(A.snapMk.x, A.snapMk.y, 9 / z, 'snapmk');
+    if (A.band) { const [a, b] = A.band; s += RC(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]), 'band'); }
+    if (A.ghost) {
+      const g = A.ghost, ty = TYPES[g.entry.type];
+      const c = { id: 'ghost', type: g.entry.type, x: g.x, y: g.y, rot: 0, tag: '', props: Object.assign({}, ty.props, g.entry.props || {}) };
+      s += `<g class="ghost">${compSVG(c, { tnums: false, info: false }, null)}</g>`;
+    }
+  } else if (A.simTool === 'meter') {
+    for (const k of ['r', 'b']) { const p = A.probes[k]; if (p) s += CI(p.x, p.y, 8 / z, 'prb ' + k); }
+  }
+  Lo.innerHTML = s;
+}
+
+/* =========================================================================
+   Ricerca di simboli, fili e punti di aggancio
+   ========================================================================= */
+function hitComp(w, pad) {
+  pad = pad == null ? 8 / A.view.z : pad;
+  let best = null, ba = Infinity;
+  for (const c of A.doc.comps) {
+    const b = compBox(c);
+    if (w[0] >= b[0] - pad && w[0] <= b[2] + pad && w[1] >= b[1] - pad && w[1] <= b[3] + pad) {
+      const ar = (b[2] - b[0]) * (b[3] - b[1]);
+      if (ar < ba) { ba = ar; best = c; }
+    }
+  }
+  return best;
+}
+function hitWire(w, tol) {
+  tol = tol || 12 / A.view.z;
+  let best = null, bd = tol;
+  for (const wi of A.doc.wires) {
+    const p = wi.pts;
+    for (let i = 0; i < p.length - 1; i++) { const d = distSeg(w[0], w[1], p[i], p[i + 1]); if (d < bd) { bd = d; best = { w: wi, i }; } }
+  }
+  return best;
+}
+function hitEndHandle(w) {
+  const tol = 16 / A.view.z;
+  for (const id of A.sel) {
+    const wi = getWire(id); if (!wi) continue;
+    const p = wi.pts, a = p[0], b = p[p.length - 1];
+    if (Math.hypot(a[0] - w[0], a[1] - w[1]) < tol) return { w: wi, end: 0 };
+    if (Math.hypot(b[0] - w[0], b[1] - w[1]) < tol) return { w: wi, end: 1 };
+  }
+  return null;
+}
+function snapPoint(w, skip) {
+  const tol = 18 / A.view.z;
+  let best = null, bd = tol;
+  for (const c of A.doc.comps) {
+    for (const t of TYPES[c.type].terms) {
+      const p = termPos(c, t), d = Math.hypot(p[0] - w[0], p[1] - w[1]);
+      if (d < bd) { bd = d; best = { x: p[0], y: p[1], kind: 'term', dir: termDir(c) }; }
+    }
+  }
+  if (best) return best;
+  bd = tol;
+  for (const wi of A.doc.wires) {
+    if (wi.id === skip) continue;
+    for (const p of [wi.pts[0], wi.pts[wi.pts.length - 1]]) {
+      const d = Math.hypot(p[0] - w[0], p[1] - w[1]);
+      if (d < bd) { bd = d; best = { x: p[0], y: p[1], kind: 'wend', dir: null }; }
+    }
+  }
+  if (best) return best;
+  bd = tol * 0.75;
+  for (const wi of A.doc.wires) {
+    if (wi.id === skip) continue;
+    const p = wi.pts;
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i], b = p[i + 1], d = distSeg(w[0], w[1], a, b);
+      if (d >= bd) continue;
+      let q;
+      if (a[1] === b[1]) q = [clamp(snap(w[0]), Math.min(a[0], b[0]), Math.max(a[0], b[0])), a[1]];
+      else if (a[0] === b[0]) q = [a[0], clamp(snap(w[1]), Math.min(a[1], b[1]), Math.max(a[1], b[1]))];
+      else continue;
+      bd = d; best = { x: q[0], y: q[1], kind: 'wire', dir: a[1] === b[1] ? 'v' : 'h' };
+    }
+  }
+  if (best) return best;
+  return { x: snap(w[0]), y: snap(w[1]), kind: 'grid', dir: null };
+}
+
+/* =========================================================================
+   Tavolozza dei simboli
+   ========================================================================= */
+let suppressClick = false;
+function buildPalette() {
+  const cats = $('#cats'), items = $('#items');
+  cats.innerHTML = CATS.map(c => `<button data-cat="${c.id}" aria-pressed="false">${esc(c.name)}</button>`).join('');
+  cats.addEventListener('click', e => { const b = e.target.closest('button[data-cat]'); if (b) showCat(b.dataset.cat); });
+  showCat(A.cat);
+  let dnd = null;
+  items.addEventListener('pointerdown', e => {
+    const t = e.target.closest('.tile'); if (!t || A.S) return;
+    dnd = { id: e.pointerId, entry: PALETTE[+t.dataset.i], x0: e.clientX, y0: e.clientY, on: false, el: t };
+  });
+  items.addEventListener('pointermove', e => {
+    if (!dnd || dnd.id !== e.pointerId) return;
+    const dx = e.clientX - dnd.x0, dy = e.clientY - dnd.y0;
+    if (!dnd.on) {
+      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        dnd.on = true;
+        try { dnd.el.setPointerCapture(e.pointerId); } catch (_) { /* niente */ }
+        if (isNarrow()) document.body.classList.remove('palopen');
+      } else return;
+    }
+    const r = cv.getBoundingClientRect();
+    if (e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) {
+      const w = toWorld(e.clientX, e.clientY);
+      A.ghost = { entry: dnd.entry, x: snap(w[0]), y: snap(w[1]) };
+    } else A.ghost = null;
+    renderOverlay();
+  });
+  const end = (e, cancel) => {
+    if (!dnd || dnd.id !== e.pointerId) return;
+    const d = dnd; dnd = null;
+    if (!d.on) return;
+    suppressClick = true; setTimeout(() => { suppressClick = false; }, 400);
+    const g = A.ghost; A.ghost = null;
+    if (g && !cancel) placeComp(d.entry, g.x, g.y); else renderOverlay();
+  };
+  items.addEventListener('pointerup', e => end(e, false));
+  items.addEventListener('pointercancel', e => end(e, true));
+  items.addEventListener('click', e => {
+    const t = e.target.closest('.tile'); if (!t || suppressClick || A.S) return;
+    const entry = PALETTE[+t.dataset.i];
+    armEntry(A.armed === entry ? null : entry);
+  });
+}
+function showCat(id) {
+  A.cat = id;
+  $$('#cats button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cat === id)));
+  $('#items').innerHTML = PALETTE.map((e, i) => (e.cat === id ? `<button class="tile" data-i="${i}" aria-pressed="${A.armed === e}" title="${esc(e.label)}">${paletteSVG(e)}<span>${esc(e.label)}</span></button>` : '')).join('');
+  $('#items').scrollTop = 0;
+}
+function refreshTiles() { $$('#items .tile').forEach(t => t.setAttribute('aria-pressed', String(PALETTE[+t.dataset.i] === A.armed))); }
+function armEntry(e) {
+  A.armed = e || null; refreshTiles();
+  if (!e) A.ghost = null;
+  if (e) { cancelChain(); if (isNarrow()) document.body.classList.remove('palopen'); }
+  renderOverlay(); hint();
+}
+function placeComp(entry, x, y) {
+  const c = newComp(entry.type, snap(x), snap(y), defaultTag(entry), entry.props);
+  A.doc.comps.push(c);
+  insertIntoWires([c]);
+  A.sel = new Set([c.id]); A.armed = null; A.ghost = null; refreshTiles();
+  commit(); render(); showProps(); hint();
+}
+
+/* =========================================================================
+   Gesti sul foglio
+   ========================================================================= */
+const ptrs = new Map();
+let gest = null, pinch = null;
+
+cv.addEventListener('pointerdown', onDown);
+cv.addEventListener('pointermove', onMove);
+cv.addEventListener('pointerup', e => onUp(e, false));
+cv.addEventListener('pointercancel', e => onUp(e, true));
+cv.addEventListener('pointerleave', e => {
+  if (e.pointerType === 'mouse' && !e.buttons && !gest && (A.ghost || A.prev || A.snapMk)) { A.ghost = null; A.prev = null; A.snapMk = null; renderOverlay(); }
+});
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+function onDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  hidePop();
+  if (document.body.classList.contains('palopen')) document.body.classList.remove('palopen');
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* niente */ }
+  const w = toWorld(e.clientX, e.clientY);
+  // in simulazione ogni dito tiene premuto il proprio pulsante
+  if (A.S && A.simTool === 'cmd') {
+    const c = hitComp(w);
+    if (c && TYPES[c.type].man === 'press' && !(A.S.link[tk(c.tag)])) { simPress(A.S, c, true); A.pressed.set(e.pointerId, c); A.needRender = true; return; }
+  }
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2) { startPinch(); return; }
+  if (ptrs.size > 2) return;
+  gest = beginGesture(e, w);
+}
+function onMove(e) {
+  const p = ptrs.get(e.pointerId);
+  if (!p) { if (!A.pressed.has(e.pointerId)) hover(e); return; }
+  p.x = e.clientX; p.y = e.clientY;
+  if (pinch) { updatePinch(); return; }
+  if (gest && gest.id === e.pointerId) gestMove(gest, e);
+}
+function onUp(e, cancel) {
+  const pc = A.pressed.get(e.pointerId);
+  if (pc) { A.pressed.delete(e.pointerId); if (A.S) { simPress(A.S, pc, false); A.needRender = true; } return; }
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (pinch) { if (ptrs.size < 2) pinch = null; return; }
+  if (gest && gest.id === e.pointerId) {
+    const g = gest; gest = null; clearTimeout(g.lp);
+    if (cancel) gestCancel(g); else gestEnd(g, e);
+  }
+}
+function startPinch() {
+  if (gest) { clearTimeout(gest.lp); gestCancel(gest); gest = null; }
+  const [a, b] = [...ptrs.values()];
+  pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: A.view.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, tx0: A.view.tx, ty0: A.view.ty };
+}
+function updatePinch() {
+  const [a, b] = [...ptrs.values()], p = pinch;
+  const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const r = cv.getBoundingClientRect(), z = clamp(p.z0 * d / p.d0, 0.25, 4);
+  const wx = (p.mx - r.left - p.tx0) / p.z0, wy = (p.my - r.top - p.ty0) / p.z0;
+  A.view.z = z; A.view.tx = mx - r.left - wx * z; A.view.ty = my - r.top - wy * z;
+  applyView();
+}
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, A.view.z * Math.exp(-e.deltaY * 0.01));
+  else { A.view.tx -= e.deltaX; A.view.ty -= e.deltaY; applyView(); }
+}, { passive: false });
+let gs = null;
+cv.addEventListener('gesturestart', e => { e.preventDefault(); gs = { z: A.view.z, x: e.clientX, y: e.clientY }; });
+cv.addEventListener('gesturechange', e => { e.preventDefault(); if (gs && !pinch && !ptrs.size) zoomAt(gs.x, gs.y, gs.z * e.scale); });
+cv.addEventListener('gestureend', e => { e.preventDefault(); gs = null; });
+
+function hover(e) {
+  if (e.pointerType !== 'mouse' || A.S || e.buttons) return;
+  const w = toWorld(e.clientX, e.clientY);
+  if (A.armed) { A.ghost = { entry: A.armed, x: snap(w[0]), y: snap(w[1]) }; renderOverlay(); }
+  else if (A.tool === 'wire') {
+    const sp = snapPoint(w);
+    A.snapMk = sp.kind !== 'grid' ? sp : null;
+    if (A.chain) { const ch = A.chain, last = ch.pts[ch.pts.length - 1]; A.prev = autoRoute({ x: last[0], y: last[1], dir: chainDir(ch) }, sp); }
+    renderOverlay();
+  }
+}
+
+function beginGesture(e, w) {
+  const g = { id: e.pointerId, sx: e.clientX, sy: e.clientY, w0: w, moved: false, kind: 'pan', tx0: A.view.tx, ty0: A.view.ty, shift: e.shiftKey || e.metaKey || e.ctrlKey, type: e.pointerType };
+  const lp = fn => { g.lp = setTimeout(() => { if (!g.moved && gest === g) { g.lpDone = true; fn(); } }, 520); };
+  if (A.S) {
+    g.kind = 'sim'; g.comp = hitComp(w); g.hw = g.comp ? null : hitWire(w);
+    if (A.simTool === 'cmd' && g.comp) lp(() => faultMenu(g.comp, g.sx, g.sy, true));
+    return g;
+  }
+  if (A.armed) { g.kind = 'place'; return g; }
+  if (A.tool === 'wire') { g.kind = 'wire'; g.start = snapPoint(w); A.snapMk = g.start.kind !== 'grid' ? g.start : null; renderOverlay(); return g; }
+  if (A.tool === 'area') { g.kind = 'area'; return g; }
+  const eh = hitEndHandle(w);
+  if (eh) { g.kind = 'wend'; g.wire = eh.w; g.end = eh.end; g.orig = eh.w.pts.map(p => p.slice()); return g; }
+  let c = hitComp(w, 0), hw = null;
+  if (!c) { hw = hitWire(w); if (!hw) c = hitComp(w); }
+  if (c) {
+    if (g.shift) { toggleSel(c.id); g.kind = 'none'; return g; }
+    g.kind = 'comp'; g.comp = c; g.wasSel = A.sel.has(c.id);
+    if (!g.wasSel) { A.sel = new Set([c.id]); render(); showProps(); }
+    lp(() => editMenu(g));
+    return g;
+  }
+  if (hw) {
+    if (g.shift) { toggleSel(hw.w.id); g.kind = 'none'; return g; }
+    g.kind = 'seg'; g.wire = hw.w; g.seg = hw.i; g.wasSel = A.sel.has(hw.w.id);
+    if (!g.wasSel) { A.sel = new Set([hw.w.id]); render(); showProps(); }
+    lp(() => editMenu(g));
+    return g;
+  }
+  return g;
+}
+function gestMove(g, e) {
+  const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
+  if (!g.moved) {
+    if (Math.hypot(dx, dy) < (g.type === 'mouse' ? 4 : 10)) return;
+    g.moved = true; clearTimeout(g.lp);
+    if (g.lpDone) return;
+    startDrag(g, dx, dy);
+  }
+  if (g.lpDone) return;
+  const z = A.view.z, w = toWorld(e.clientX, e.clientY);
+  switch (g.kind) {
+    case 'pan': case 'sim': case 'place': A.view.tx = g.tx0 + dx; A.view.ty = g.ty0 + dy; applyView(); break;
+    case 'comp': doMove(g, dx / z, dy / z); break;
+    case 'seg': doSeg(g, dx / z, dy / z); break;
+    case 'wend': {
+      const sp = snapPoint(w, g.wire.id);
+      g.wire.pts = dragEnd(g.orig, g.end, [sp.x, sp.y]);
+      A.snapMk = sp.kind !== 'grid' ? sp : null; render(); break;
+    }
+    case 'wire': {
+      const sp = snapPoint(w);
+      A.prev = autoRoute(g.start, sp, g.dir); A.snapMk = sp.kind !== 'grid' ? sp : null; renderOverlay(); break;
+    }
+    case 'area': A.band = [g.w0, w]; renderOverlay(); break;
+  }
+}
+function startDrag(g, dx, dy) {
+  if (g.kind === 'seg' && g.wasSel && A.sel.size > 1) g.kind = 'comp';
+  if (g.kind === 'comp') { if (g.comp && !A.sel.has(g.comp.id)) A.sel = new Set([g.comp.id]); startMove(g); }
+  else if (g.kind === 'seg') g.orig = g.wire.pts.map(p => p.slice());
+  else if (g.kind === 'wire') { if (A.chain) endChain(); g.dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; }
+}
+function gestEnd(g, e) {
+  if (g.lpDone) return;
+  const w = toWorld(e.clientX, e.clientY);
+  switch (g.kind) {
+    case 'sim': if (!g.moved) simTap(g, w); break;
+    case 'place': if (!g.moved && A.armed) placeComp(A.armed, w[0], w[1]); break;
+    case 'pan': if (!g.moved && A.sel.size) { A.sel.clear(); render(); showProps(); } break;
+    case 'comp':
+      if (g.moved) endMove(g);
+      else if (g.wasSel && A.sel.size > 1) { A.sel = new Set([g.comp.id]); render(); showProps(); }
+      break;
+    case 'seg':
+      if (g.moved) { cleanWires(); commit(); render(); showProps(); }
+      else if (g.wasSel && A.sel.size > 1) { A.sel = new Set([g.wire.id]); render(); showProps(); }
+      break;
+    case 'wend': A.snapMk = null; if (g.moved) { cleanWires(); commit(); render(); showProps(); } else renderOverlay(); break;
+    case 'wire': wireUp(g, w); break;
+    case 'area': areaUp(g); break;
+  }
+}
+function gestCancel(g) {
+  if ((g.kind === 'comp' || g.kind === 'seg' || g.kind === 'wend') && g.moved) { A.doc = JSON.parse(A.saved); render(); showProps(); }
+  A.prev = null; A.band = null; A.snapMk = null; renderOverlay();
+}
+function toggleSel(id) { if (A.sel.has(id)) A.sel.delete(id); else A.sel.add(id); render(); showProps(); }
+
+/* ---------- spostamento dei simboli (i fili collegati seguono) ---------- */
+function startMove(g) {
+  const comps = A.doc.comps.filter(c => A.sel.has(c.id));
+  const tset = new Set();
+  for (const c of comps) for (const t of TYPES[c.type].terms) { const p = termPos(c, t); tset.add(p[0] + ',' + p[1]); }
+  const wires = [];
+  for (const w of A.doc.wires) {
+    const a = w.pts[0], b = w.pts[w.pts.length - 1];
+    const ea = tset.has(a[0] + ',' + a[1]), eb = tset.has(b[0] + ',' + b[1]);
+    if (A.sel.has(w.id) || (ea && eb)) wires.push({ w, orig: w.pts.map(p => p.slice()), all: true });
+    else if (ea || eb) wires.push({ w, orig: w.pts.map(p => p.slice()), ea, eb });
+  }
+  g.mv = { comps: comps.map(c => ({ c, x: c.x, y: c.y })), wires, dx: 0, dy: 0 };
+}
+function doMove(g, dxw, dyw) {
+  const mv = g.mv, dx = snap(dxw), dy = snap(dyw);
+  if (dx === mv.dx && dy === mv.dy) return;
+  mv.dx = dx; mv.dy = dy;
+  for (const o of mv.comps) { o.c.x = o.x + dx; o.c.y = o.y + dy; }
+  for (const o of mv.wires) {
+    if (o.all) { o.w.pts = o.orig.map(p => [p[0] + dx, p[1] + dy]); continue; }
+    let pts = o.orig;
+    if (o.ea) pts = dragEnd(pts, 0, [o.orig[0][0] + dx, o.orig[0][1] + dy]);
+    if (o.eb) { const e = o.orig[o.orig.length - 1]; pts = dragEnd(pts, 1, [e[0] + dx, e[1] + dy]); }
+    o.w.pts = pts;
+  }
+  render();
+}
+function endMove(g) {
+  cleanWires();
+  insertIntoWires(g.mv.comps.map(o => o.c));
+  commit(); render(); showProps();
+}
+/* trascinamento di un tratto di filo, perpendicolare a sé stesso */
+function doSeg(g, dxw, dyw) {
+  const o = g.orig, i = g.seg, a = o[i], b = o[i + 1];
+  if (!a || !b) return;
+  const hor = a[1] === b[1], ver = a[0] === b[0];
+  if (hor === ver) return;
+  const d = hor ? snap(dyw) : snap(dxw);
+  if (d === g.lastD) return;
+  g.lastD = d;
+  const p = o.map(q => [q[0], q[1]]); let s = i;
+  if (s === 0) { p.unshift([o[0][0], o[0][1]]); s = 1; }
+  if (s + 1 === p.length - 1) p.push([p[p.length - 1][0], p[p.length - 1][1]]);
+  if (hor) { p[s][1] += d; p[s + 1][1] += d; } else { p[s][0] += d; p[s + 1][0] += d; }
+  g.wire.pts = simplify(p);
+  render();
+}
+
+/* ---------- fili ---------- */
+function addWire(pts) {
+  pts = simplify(pts);
+  if (pts.length < 2 || segLen(pts) === 0) return null;
+  const k1 = JSON.stringify(pts), k2 = JSON.stringify(pts.slice().reverse());
+  if (A.doc.wires.some(w => { const k = JSON.stringify(w.pts); return k === k1 || k === k2; })) return null;
+  const w = { id: uid('w'), pts };
+  A.doc.wires.push(w);
+  commit(); render();
+  return w;
+}
+function wireUp(g, w) {
+  if (g.moved) {
+    const sp = snapPoint(w);
+    A.prev = null; A.snapMk = null;
+    if (!addWire(autoRoute(g.start, sp, g.dir))) renderOverlay();
+    return;
+  }
+  const p = g.start;
+  A.snapMk = null;
+  if (!A.chain) { A.chain = { pts: [[p.x, p.y]], dir0: p.dir }; hint(); renderOverlay(); return; }
+  const ch = A.chain, last = ch.pts[ch.pts.length - 1];
+  if (p.x === last[0] && p.y === last[1]) { endChain(); return; }
+  const leg = autoRoute({ x: last[0], y: last[1], dir: chainDir(ch) }, p);
+  ch.pts = simplify(ch.pts.concat(leg.slice(1)));
+  A.prev = null;
+  if (p.kind !== 'grid') endChain(); else renderOverlay();
+}
+function chainDir(ch) {
+  const n = ch.pts.length;
+  if (n < 2) return ch.dir0 || null;
+  const a = ch.pts[n - 2], b = ch.pts[n - 1];
+  return a[0] === b[0] ? 'h' : 'v';
+}
+function endChain() {
+  const ch = A.chain; A.chain = null; A.prev = null; A.snapMk = null;
+  if (ch && ch.pts.length >= 2) addWire(ch.pts);
+  hint(); renderOverlay();
+}
+function cancelChain() { if (!A.chain) return; A.chain = null; A.prev = null; hint(); renderOverlay(); }
+function backChain() { const ch = A.chain; if (!ch) return; if (ch.pts.length <= 1) { cancelChain(); return; } ch.pts.pop(); renderOverlay(); }
+
+function areaUp(g) {
+  const b = A.band; A.band = null;
+  if (!g.moved || !b) { A.sel.clear(); render(); showProps(); return; }
+  const x0 = Math.min(b[0][0], b[1][0]), x1 = Math.max(b[0][0], b[1][0]), y0 = Math.min(b[0][1], b[1][1]), y1 = Math.max(b[0][1], b[1][1]);
+  const inR = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  const sel = new Set();
+  for (const c of A.doc.comps) { const bb = compBox(c); if (inR((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2)) sel.add(c.id); }
+  for (const wi of A.doc.wires) if (wi.pts.every(p => inR(p[0], p[1]))) sel.add(wi.id);
+  A.sel = sel; setTool('sel'); render(); showProps();
+}
+
+/* ---------- comandi sulla selezione ---------- */
+function rotateSel() {
+  const ids = [...A.sel]; if (ids.length !== 1 || A.S) return;
+  const c = getComp(ids[0]); if (!c || TYPES[c.type].norot) return;
+  const ty = TYPES[c.type], old = ty.terms.map(t => termPos(c, t));
+  c.rot = ((c.rot || 0) + 90) % 360;
+  const nw = ty.terms.map(t => termPos(c, t));
+  for (const w of A.doc.wires) {
+    for (const end of [0, 1]) {
+      const p = end ? w.pts[w.pts.length - 1] : w.pts[0];
+      const i = old.findIndex(q => q[0] === p[0] && q[1] === p[1]);
+      if (i >= 0) w.pts = dragEnd(w.pts, end, nw[i]);
+    }
+  }
+  cleanWires(); insertIntoWires([c]); commit(); render(); showProps();
+}
+function deleteSel() {
+  if (!A.sel.size || A.S) return;
+  A.doc.comps = A.doc.comps.filter(c => !A.sel.has(c.id));
+  A.doc.wires = A.doc.wires.filter(w => !A.sel.has(w.id));
+  A.sel.clear(); commit(); render(); showProps();
+}
+function duplicateSel() {
+  if (!A.sel.size || A.S) return;
+  const off = 40, out = [], rename = {};
+  const src = A.doc.comps.filter(c => A.sel.has(c.id));
+  for (const c of src) {
+    const ty = TYPES[c.type], n = JSON.parse(JSON.stringify(c));
+    n.id = uid('c'); n.x += off; n.y += off;
+    if (!ty.noTag && (ty.fam !== 'contact' || ty.man)) {
+      const k = tk(c.tag);
+      if (rename[k] === undefined) rename[k] = nextTag(ty.prefix, out) || c.tag;
+      n.tag = rename[k];
+    }
+    out.push(n);
+  }
+  for (const n of out) { const ty = TYPES[n.type]; if (ty.fam === 'contact' && !ty.man && rename[tk(n.tag)] !== undefined) n.tag = rename[tk(n.tag)]; }
+  const wires = A.doc.wires.filter(w => A.sel.has(w.id)).map(w => ({ id: uid('w'), pts: w.pts.map(p => [p[0] + off, p[1] + off]) }));
+  A.doc.comps.push(...out); A.doc.wires.push(...wires);
+  A.sel = new Set(out.map(c => c.id).concat(wires.map(w => w.id)));
+  commit(); render(); showProps();
+}
+function editMenu(g) {
+  const items = [];
+  if (g.kind === 'comp' && A.sel.size === 1 && !TYPES[g.comp.type].norot) items.push({ label: 'Ruota di 90°', act: rotateSel });
+  items.push({ label: 'Duplica', act: duplicateSel }, { label: 'Elimina', act: deleteSel });
+  popMenu(g.sx + 14, g.sy + 14, items, A.sel.size > 1 ? A.sel.size + ' elementi' : g.comp ? TYPES[g.comp.type].name + (g.comp.tag ? ' ' + g.comp.tag : '') : 'Filo', true);
+}
+function setTool(t) {
+  A.tool = t; cancelChain(); A.prev = null; A.snapMk = null; A.band = null;
+  $$('#tools button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
+  render(); hint();
+}
+function hint() {
+  let t = '';
+  if (A.S) t = { cmd: 'Tieni premuti i pulsanti, tocca selettori e interruttori. Tieni premuto su un componente per i guasti.', meter: 'Tocca due punti: prima il puntale rosso, poi il nero.', fault: 'Tocca un componente o un filo per guastarlo o ripararlo.' }[A.simTool];
+  else if (A.armed) t = 'Tocca il foglio per posare: ' + A.armed.label;
+  else if (A.chain) t = 'Tocca gli angoli e l\'arrivo. Tocca di nuovo l\'ultimo punto per finire.';
+  else if (A.tool === 'wire') t = 'Trascina da un morsetto all\'altro, oppure tocca partenza, angoli e arrivo.';
+  else if (A.tool === 'area') t = 'Trascina un rettangolo attorno agli elementi da selezionare.';
+  const el = $('#hint');
+  el.textContent = t || '';
+  clearTimeout(hintT);
+  if (t && !A.chain) hintT = setTimeout(() => { el.textContent = ''; }, A.S ? 7000 : 9000);
+  $('#wirebar').hidden = !A.chain || !!A.S;
+}
+let hintT = 0;
+
+/* =========================================================================
+   Riquadro delle proprietà
+   ========================================================================= */
+function showProps() {
+  const box = $('#props');
+  if (A.S) { box.hidden = true; return; }
+  for (const id of [...A.sel]) if (!getComp(id) && !getWire(id)) A.sel.delete(id);
+  if (!A.sel.size) { box.hidden = true; box.innerHTML = ''; return; }
+  const ids = [...A.sel];
+  let h = '<button class="x" data-a="close" aria-label="Chiudi">×</button>';
+  if (ids.length === 1 && getComp(ids[0])) h += compPropsHTML(getComp(ids[0]));
+  else if (ids.length === 1) h += '<h3>Filo</h3><p class="note2">Trascina un tratto per spostarlo. Trascina i quadratini alle estremità per ricollegarlo a un altro punto.</p><div class="acts"><button class="btn danger" data-a="del">Elimina il filo</button></div>';
+  else h += `<h3>${ids.length} elementi selezionati</h3><p class="note2">Trascina uno dei simboli selezionati per spostarli tutti insieme.</p><div class="acts"><button class="btn" data-a="dup">Duplica</button><button class="btn danger" data-a="del">Elimina</button></div>`;
+  box.innerHTML = h; box.hidden = false;
+}
+function compPropsHTML(c) {
+  const ty = TYPES[c.type];
+  let h = `<h3>${esc(ty.name)}</h3>`;
+  if (!ty.noTag) h += `<div class="f"><label for="pf-tag">${ty.fam === 'term' ? 'Sigla della morsettiera' : 'Sigla'}</label><input id="pf-tag" data-k="@tag" value="${esc(c.tag)}" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"></div>`;
+  ty.fields.forEach((f, i) => { h += fieldHTML(f, c.props[f.k], i); });
+  const ln = linkNote(c);
+  h += `<p class="note2${ln.warn ? ' warn' : ''}" id="pf-link"${ln.txt ? '' : ' hidden'}>${esc(ln.txt)}</p>`;
+  h += `<div class="acts">${ty.norot ? '' : '<button class="btn" data-a="rot">Ruota</button>'}<button class="btn" data-a="dup">Duplica</button><button class="btn danger" data-a="del">Elimina</button></div>`;
+  return h;
+}
+function fieldHTML(f, v, i) {
+  const id = 'pf-' + i;
+  let inp;
+  if (f.kind === 'sel') inp = `<select id="${id}" data-k="${f.k}">${f.opts.map(o => `<option value="${esc(o[0])}"${String(o[0]) === String(v) ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
+  else if (f.kind === 'bool') inp = `<select id="${id}" data-k="${f.k}"><option value="1"${v ? ' selected' : ''}>${esc(f.yes)}</option><option value="0"${v ? '' : ' selected'}>${esc(f.no)}</option></select>`;
+  else if (f.kind === 'num') inp = `<div class="unit"><input id="${id}" data-k="${f.k}" inputmode="decimal" autocomplete="off" value="${esc(fmtN(v))}"><span>${esc(f.unit || '')}</span></div>`;
+  else if (f.kind === 'area') inp = `<textarea id="${id}" data-k="${f.k}">${esc(v)}</textarea>`;
+  else inp = `<input id="${id}" data-k="${f.k}" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(v)}">`;
+  return `<div class="f"><label for="${id}">${esc(f.label)}</label>${inp}</div>`;
+}
+function linkNote(c) {
+  const ty = TYPES[c.type], k = tk(c.tag), comps = A.doc.comps;
+  const same = comps.filter(o => o !== c && tk(o.tag) === k);
+  if (ty.fam === 'contact' && !ty.man) {
+    if (!k) return { txt: 'Senza sigla il contatto non si muove.', warn: true };
+    const m = same.find(o => TYPES[o.type].fam === 'coil' || (TYPES[o.type].fam === 'prot' && TYPES[o.type].prot !== 'fuse'));
+    if (m) return { txt: `Si muove con: ${TYPES[m.type].name.toLowerCase()} ${m.tag}.` };
+    if (comps.some(o => o.type === 'cyl' && (tk(o.tag) + '0' === k || tk(o.tag) + '1' === k))) return { txt: 'Azionato dallo stelo del cilindro.' };
+    return { txt: `Nello schema non c'è una bobina ${c.tag}: in simulazione il contatto non si muoverà.`, warn: true };
+  }
+  if (ty.fam === 'contact' && ty.man) {
+    if (comps.some(o => o.type === 'cyl' && (tk(o.tag) + '0' === k || tk(o.tag) + '1' === k))) return { txt: 'Azionato dallo stelo del cilindro.' };
+    const n = same.filter(o => TYPES[o.type].fam === 'contact').length;
+    return n ? { txt: `Altri ${n} contatti hanno la sigla ${c.tag}: sono lo stesso comando e si muovono insieme.` } : { txt: '' };
+  }
+  if (ty.fam === 'coil') {
+    if (same.some(o => TYPES[o.type].fam === 'coil')) return { txt: `C'è un'altra bobina ${c.tag}: usa sigle diverse.`, warn: true };
+    const cs = same.filter(o => TYPES[o.type].fam === 'contact');
+    if (!cs.length) return { txt: `Nessun contatto ${c.tag || ''} nello schema per ora.` };
+    const no = cs.filter(o => TYPES[o.type].kind === 'NO' || TYPES[o.type].kind === 'NO3').length, nc = cs.filter(o => TYPES[o.type].kind === 'NC').length, co = cs.length - no - nc;
+    return { txt: `Contatti ${c.tag}: ${no} NA, ${nc} NC${co ? ', ' + co + ' in scambio' : ''}.` };
+  }
+  if (ty.fam === 'prot' && ty.prot !== 'fuse') {
+    const n = same.filter(o => TYPES[o.type].fam === 'contact').length;
+    if (ty.prot === 'ft') return { txt: n ? `Contatti 95-96 e 97-98 con sigla ${c.tag}: ${n}.` : `Aggiungi il contatto 95-96 con sigla ${c.tag} nel circuito di comando.` };
+    return { txt: n ? `Contatti ausiliari con sigla ${c.tag}: ${n}.` : '' };
+  }
+  if (c.type === 'cyl') return { txt: `I finecorsa si chiamano ${String(c.tag || 'A').toLowerCase()}0 (rientrato) e ${String(c.tag || 'A').toLowerCase()}1 (uscito).` };
+  return { txt: '' };
+}
+function propChange(el) {
+  const k = el.dataset && el.dataset.k; if (!k) return;
+  const ids = [...A.sel]; if (ids.length !== 1) return;
+  const c = getComp(ids[0]); if (!c) return;
+  const ty = TYPES[c.type];
+  if (k === '@tag') c.tag = el.value.trim().slice(0, 24);
+  else {
+    const f = ty.fields.find(x => x.k === k); if (!f) return;
+    let v = el.value;
+    if (f.kind === 'num') {
+      const n = parseFloat(String(v).replace(',', '.'));
+      if (!isFinite(n)) { el.value = fmtN(c.props[k]); return; }
+      v = clamp(n, f.min != null ? f.min : -Infinity, f.max != null ? f.max : Infinity); el.value = fmtN(v);
+    } else if (f.kind === 'bool') v = v === '1';
+    else if (f.kind === 'sel' && f.num) v = +v;
+    c.props[k] = v;
+  }
+  commit(); render();
+  const ln = linkNote(c), p = $('#pf-link');
+  if (p) { p.textContent = ln.txt; p.hidden = !ln.txt; p.classList.toggle('warn', !!ln.warn); }
+}
+
+/* =========================================================================
+   Simulazione
+   ========================================================================= */
+function simStart() {
+  if (A.S) return;
+  cancelChain(); armEntry(null); A.prev = null; A.snapMk = null; A.band = null;
+  document.body.classList.remove('palopen');
+  const warns = checkDoc(A.doc);
+  A.S = simCreate(A.doc); A.rot = {}; A.probes = { r: null, b: null }; A.mKey = ''; A.haltShown = false; A.hiddenTries = 0; A.wKey = '';
+  document.body.classList.add('sim');
+  $('#mainsw').setAttribute('aria-pressed', 'true'); $('#swlab').textContent = 'In simulazione'; $('#swsub').textContent = 'tocca per fermare';
+  setSimTool('cmd'); showProps(); render(); updHidden();
+  if (warns.length) toast(warns[0].msg + (warns.length > 1 ? ` Ci sono altri ${warns.length - 1} avvisi in File, Controlla lo schema.` : ''), 'warn', 7000);
+  A.lastFrame = 0; A.acc = 0;
+  requestAnimationFrame(loop);
+}
+function simStop() {
+  if (!A.S) return;
+  A.S = null; A.pressed.clear(); hidePop();
+  $('#toasts').innerHTML = '';
+  document.body.classList.remove('sim');
+  $('#mainsw').setAttribute('aria-pressed', 'false'); $('#swlab').textContent = 'Simula'; $('#swsub').textContent = 'schema fermo';
+  $('#meter').hidden = true;
+  A.wKey = ''; render(); showProps(); hint();
+}
+function simRestart() {
+  if (!A.S) return;
+  A.S = simCreate(A.doc); A.rot = {}; A.haltShown = false; A.mKey = ''; A.pressed.clear(); A.hiddenTries = 0; A.wKey = '';
+  render(); updHidden(); toast('Simulazione ricominciata da capo.');
+}
+function loop() {
+  const S = A.S; if (!S) return;
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  const dtr = A.lastFrame ? Math.min(0.1, (now - A.lastFrame) / 1000) : 0;
+  A.lastFrame = now; A.acc += dtr;
+  if (S.dirty && A.acc < DT) A.acc = DT; // i comandi rispondono subito
+  let ch = false, n = 0;
+  while (A.acc >= DT && n < 12 && !S.halt) { if (simStep(S, DT)) ch = true; A.acc -= DT; n++; }
+  if (n >= 12) A.acc = 0;
+  if (S.evts.length) { for (const e of S.evts) if (e.kind !== 'info') toast(e.msg, e.kind); S.evts.length = 0; }
+  if (S.halt && !A.haltShown) { A.haltShown = true; ch = true; showHalt(); }
+  if (ch || A.needRender) { A.needRender = false; render(); }
+  spinRotors(dtr);
+  $('#simclock').textContent = fmtClock(S.t);
+  updMeter();
+}
+function spinRotors(dt) {
+  if (RM) return;
+  const S = A.S;
+  for (const c of S.motors) {
+    const m = S.mo[c.id]; if (m.speed <= 0.01) continue;
+    A.rot[c.id] = ((A.rot[c.id] || 0) + m.dir * m.speed * 240 * dt) % 360;
+    const el = compEls.get(c.id), r = el && el.querySelector('.rotor');
+    if (r) r.setAttribute('transform', `rotate(${f2(A.rot[c.id])})`);
+  }
+}
+function fmtClock(t) { const m = Math.floor(t / 60), s = t - m * 60; return String(m).padStart(2, '0') + ':' + s.toFixed(1).padStart(4, '0').replace('.', ','); }
+function setSimTool(t) {
+  A.simTool = t;
+  $$('#simtools button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.st === t)));
+  $('#meter').hidden = t !== 'meter';
+  A.mKey = ''; renderOverlay(); updMeter(); hint();
+}
+function simTap(g, w) {
+  const S = A.S, c = g.comp;
+  if (A.simTool === 'meter') { setProbe(w); return; }
+  if (A.simTool === 'fault') { if (c) faultMenu(c, g.sx, g.sy); else if (g.hw) wireMenu(g.hw.w, g.sx, g.sy); return; }
+  if (!c) return;
+  const ty = TYPES[c.type], k = tk(c.tag);
+  if (ty.man && S.link[k]) { toast(S.link[k].kind.startsWith('cyl') ? 'Questo finecorsa è azionato dallo stelo del cilindro.' : `La sigla ${c.tag} è anche di una bobina: il contatto segue quella.`); return; }
+  if (ty.man === 'latch' || ty.man === 'toggle') { simToggle(S, c); A.needRender = true; return; }
+  if (ty.fam === 'prot') { const m = simProtTap(S, c); if (m) toast(m); A.needRender = true; return; }
+  if (ty.fam === 'contact') { toast(S.link[k] ? `Questo contatto si muove con ${c.tag}.` : `Nessuna bobina ${c.tag || ''} comanda questo contatto.`); return; }
+  if (ty.fam === 'motor') toast('Tieni premuto sul motore per i guasti e per il contatto con la carcassa.');
+}
+
+/* ---------- tester ---------- */
+function probeAt(w) {
+  const tol = 18 / A.view.z, ctx = { nums: contactNums(A.doc) };
+  let best = null, bd = tol;
+  for (const c of A.doc.comps) {
+    const ty = TYPES[c.type], labs = termLabels(c, ctx);
+    ty.terms.forEach((t, i) => {
+      const p = termPos(c, t), d = Math.hypot(p[0] - w[0], p[1] - w[1]);
+      if (d < bd) { bd = d; best = { x: p[0], y: p[1], lab: (c.tag || ty.name) + (labs[i] ? ' morsetto ' + labs[i] : '') }; }
+    });
+  }
+  if (best) return best;
+  const hw = hitWire(w, tol);
+  if (hw) {
+    const a = hw.w.pts[hw.i], b = hw.w.pts[hw.i + 1];
+    const q = a[1] === b[1] ? [clamp(w[0], Math.min(a[0], b[0]), Math.max(a[0], b[0])), a[1]] : [a[0], clamp(w[1], Math.min(a[1], b[1]), Math.max(a[1], b[1]))];
+    return { x: q[0], y: q[1], lab: 'un filo' };
+  }
+  return null;
+}
+function setProbe(w) {
+  const p = probeAt(w);
+  if (!p) { toast('Tocca un morsetto o un filo per appoggiare il puntale.'); return; }
+  const P = A.probes;
+  if (!P.r || P.b) { P.r = p; P.b = null; } else P.b = p;
+  A.mKey = ''; renderOverlay(); updMeter();
+}
+function probeVertex(S, p) {
+  const NL = S.NL, v = NL.vKey.get((Math.round(p.x * 10) / 10) + ',' + (Math.round(p.y * 10) / 10));
+  if (v !== undefined && (NL.deg[v] > 0 || NL.tcount.get(v))) return v;
+  let best = null, bd = 0.6;
+  for (const e of NL.edges) { const d = distSeg(p.x, p.y, NL.vPos[e.a], NL.vPos[e.b]); if (d < bd) { bd = d; best = e.a; } }
+  return best;
+}
+const fmtMeterV = V => (V < 0.05 ? '0,0' : V < 100 ? V.toFixed(1).replace('.', ',') : String(Math.round(V)));
+function fmtMeterR(R) {
+  if (!isFinite(R) || R > 2e7) return ['OL', ''];
+  if (R < 1) return [R.toFixed(2).replace('.', ','), 'Ω'];
+  if (R < 1000) return [R.toFixed(1).replace('.', ','), 'Ω'];
+  if (R < 1e6) return [(R / 1000).toFixed(2).replace('.', ','), 'kΩ'];
+  return [(R / 1e6).toFixed(2).replace('.', ','), 'MΩ'];
+}
+function updMeter() {
+  const S = A.S; if (!S || A.simTool !== 'meter') return;
+  const P = A.probes;
+  const key = S.solN + '|' + A.mMode + '|' + (P.r ? P.r.x + ',' + P.r.y : '') + '|' + (P.b ? P.b.x + ',' + P.b.y : '');
+  if (key === A.mKey) return;
+  A.mKey = key;
+  let txt = '– – –', unit = '', msg = '';
+  if (P.r && P.b) {
+    const r = meterRead(S, probeVertex(S, P.r), probeVertex(S, P.b), A.mMode);
+    if (!r) msg = 'Un puntale non tocca un conduttore collegato.';
+    else if (r.err) { txt = '– – –'; msg = r.err; }
+    else if (A.mMode === 'V') { txt = fmtMeterV(r.V); unit = 'V'; }
+    else { const f = fmtMeterR(r.R); txt = f[0]; unit = f[1]; if (f[0] === 'OL') msg = 'Circuito aperto: tra i due punti non c\'è continuità.'; }
+  } else if (P.r) msg = 'Ora tocca il secondo punto.';
+  $('#m-lcd').innerHTML = esc(txt) + (unit ? `<small>${esc(unit)}</small>` : '');
+  $('#m-r').textContent = 'Rosso: ' + (P.r ? P.r.lab : 'tocca un morsetto o un filo');
+  $('#m-b').textContent = 'Nero: ' + (P.b ? P.b.lab : '—');
+  $('#m-msg').textContent = msg;
+}
+function setMMode(m) {
+  A.mMode = m; $('#m-v').setAttribute('aria-pressed', String(m === 'V')); $('#m-o').setAttribute('aria-pressed', String(m === 'R'));
+  A.mKey = ''; updMeter();
+}
+
+/* ---------- guasti ---------- */
+function faultMenu(c, x, y, fromHold) {
+  const S = A.S; if (!S) return;
+  const ty = TYPES[c.type], fx = S.fx[c.id], items = [];
+  const title = (ty.name + ' ' + (c.tag || '')).trim();
+  if (S.hidden && !S.hiddenShown && !(fromHold && ty.fam === 'motor')) { guessMenu({ id: c.id }, title, x, y); return; }
+  const setFx = (k, what) => {
+    if (k) S.fx[c.id] = k; else delete S.fx[c.id];
+    if (!k && S.hidden && S.hidden.id === c.id) S.hidden = null;
+    S.dirty = true; evt(S, `${tagOf(c)}: ${what}`); A.needRender = true; updHidden();
+  };
+  if (ty.fam === 'contact') {
+    items.push({ label: 'Funziona normalmente', chk: !fx, act: () => setFx(null, 'riparato') });
+    items.push({ label: 'Contatto interrotto', sub: 'non chiude mai il circuito', chk: fx === 'stuck0', act: () => setFx('stuck0', 'contatto interrotto') });
+    if (ty.kind !== 'INV') items.push({ label: 'Contatto incollato', sub: 'resta sempre chiuso', chk: fx === 'stuck1', act: () => setFx('stuck1', 'contatto incollato') });
+  } else if (ty.fam === 'coil' || ty.fam === 'lamp' || ty.fam === 'term') {
+    const what = ty.fam === 'coil' ? 'Bobina interrotta' : ty.fam === 'lamp' ? (c.type === 'buz' ? 'Sirena guasta' : 'Lampada bruciata') : 'Morsetto allentato';
+    items.push({ label: 'Funziona normalmente', chk: !fx, act: () => setFx(null, 'riparato') });
+    items.push({ label: what, sub: 'il circuito resta aperto', chk: fx === 'open', act: () => setFx('open', what.toLowerCase()) });
+    const ld = S.ld[c.id];
+    if (ld && ld.burnt) items.push({ label: 'Sostituisci il componente bruciato', act: () => { ld.burnt = false; S.dirty = true; evt(S, `${tagOf(c)}: sostituito`); A.needRender = true; } });
+  } else if (ty.fam === 'motor') {
+    const m = S.mo[c.id];
+    const tg = (f, what) => () => { f(); S.dirty = true; evt(S, `${tagOf(c)}: ${what}`); A.needRender = true; };
+    items.push({ label: 'Sovraccarico meccanico', sub: 'la corrente assorbita sale dell\'80%', chk: m.ol, act: tg(() => { m.ol = !m.ol; }, m.ol ? 'fine del sovraccarico' : 'sovraccarico meccanico') });
+    items.push({ label: 'Rotore bloccato', sub: 'non gira e assorbe molta corrente', chk: m.lock, act: tg(() => { m.lock = !m.lock; }, m.lock ? 'rotore sbloccato' : 'rotore bloccato') });
+    items.push({ label: 'Avvolgimento interrotto', sub: 'una fase del motore è aperta', chk: m.openW, act: tg(() => { m.openW = !m.openW; }, m.openW ? 'avvolgimento riparato' : 'avvolgimento interrotto') });
+    items.push({ label: 'Guasto a massa franco', sub: 'una fase tocca la carcassa', chk: m.earth === 1, act: tg(() => { m.earth = m.earth === 1 ? 0 : 1; }, m.earth === 1 ? 'guasto a massa eliminato' : 'guasto a massa franco') });
+    items.push({ label: 'Dispersione verso massa', sub: 'isolamento degradato, circa 2 kΩ', chk: m.earth === 2, act: tg(() => { m.earth = m.earth === 2 ? 0 : 2; }, m.earth === 2 ? 'dispersione eliminata' : 'dispersione verso massa') });
+    items.push({ sep: true });
+    items.push({ label: 'Una persona tocca la carcassa', sub: 'corpo umano di circa 1 kΩ verso terra', chk: m.touch, act: () => { m.touch = !m.touch; S.dirty = true; A.needRender = true; } });
+  } else if (ty.prot === 'id') {
+    items.push({ label: 'Premi il tasto di prova T', sub: 'il differenziale deve aprirsi', act: () => { simTest(S, c); A.needRender = true; } });
+  }
+  if (!items.length) { toast('Per questo componente non ci sono guasti da simulare.'); return; }
+  popMenu(x + 14, y + 14, items, title, true);
+}
+function wireMenu(w, x, y) {
+  const S = A.S;
+  if (S.hidden && !S.hiddenShown) { guessMenu({ wire: w.id }, 'Filo', x, y); return; }
+  const br = S.wfx.has(w.id);
+  popMenu(x + 14, y + 14, [
+    { label: 'Filo integro', chk: !br, act: () => { setWireBreak(S, w.id, false); if (S.hidden && S.hidden.wire === w.id) S.hidden = null; evt(S, 'Filo riparato'); A.needRender = true; updHidden(); } },
+    { label: 'Filo interrotto', sub: 'conduttore tagliato o morsetto non serrato', chk: br, act: () => { setWireBreak(S, w.id, true); evt(S, 'Filo interrotto'); A.needRender = true; } },
+  ], 'Filo', true);
+}
+function guessMenu(tgt, title, x, y) {
+  popMenu(x + 14, y + 14, [{
+    label: 'È questo il guasto', sub: 'segnalalo e riparalo',
+    act: () => {
+      const S = A.S, h = S && S.hidden; if (!h) return;
+      if ((tgt.id && h.id === tgt.id) || (tgt.wire && h.wire === tgt.wire)) {
+        if (h.wire) setWireBreak(S, h.wire, false); else delete S.fx[h.id];
+        S.hidden = null; S.dirty = true;
+        evt(S, 'Guasto trovato e riparato: ' + h.desc);
+        toast(`Esatto: ${h.desc}. Guasto riparato${A.hiddenTries ? ` dopo ${A.hiddenTries} tentativi sbagliati` : ' al primo tentativo'}.`, 'ok', 8000);
+        A.hiddenTries = 0;
+      } else {
+        A.hiddenTries++;
+        toast(`No, qui è tutto a posto (tentativi sbagliati: ${A.hiddenTries}). Continua a misurare con il tester.`, 'warn');
+      }
+      A.needRender = true; updHidden();
+    },
+  }], title, true);
+}
+function updHidden() {
+  const S = A.S;
+  $('#hidlab').textContent = S && S.hidden && !S.hiddenShown ? 'Mostra il guasto' : 'Guasto nascosto';
+}
+function hiddenClick() {
+  const S = A.S; if (!S) return;
+  if (S.hidden && !S.hiddenShown) {
+    S.hiddenShown = true; A.needRender = true; A.wKey = '';
+    evt(S, 'Soluzione mostrata: ' + S.hidden.desc);
+    toast('Il guasto era: ' + S.hidden.desc + '. Ora è evidenziato sul foglio.', 'warn', 9000);
+    updHidden(); return;
+  }
+  if (S.hidden) { if (S.hidden.wire) setWireBreak(S, S.hidden.wire, false); else delete S.fx[S.hidden.id]; S.hidden = null; S.dirty = true; }
+  const h = randomFault(S);
+  if (!h) { toast('Lo schema è vuoto: non c\'è niente da guastare.'); return; }
+  A.hiddenTries = 0; A.needRender = true; A.wKey = '';
+  evt(S, 'Guasto nascosto inserito');
+  toast('Guasto nascosto inserito. Fai funzionare lo schema, misura con il tester e segnala il componente difettoso con lo strumento Guasti.', 'warn', 9000);
+  updHidden();
+}
+function showLog() {
+  const S = A.S; if (!S) return;
+  const rows = S.log.slice().reverse().map(e => `<div class="${e.kind}"><span>${fmtClock(e.t)}</span>${esc(e.msg)}</div>`).join('');
+  openModal(`<h2>Registro degli eventi</h2><div class="log">${rows || '<p>Nessun evento finora.</p>'}</div><div class="acts"><button class="btn pri" data-close>Chiudi</button></div>`);
+}
+function showHalt() {
+  const S = A.S;
+  openModal(`<h2>Cortocircuito</h2><div class="warnbox"><p>${esc(S.halt.msg)}</p></div><p>I conduttori interessati lampeggiano in fucsia sul foglio.</p><div class="acts"><button class="btn" data-act="edit">Torna al disegno</button><button class="btn pri" data-act="again">Ricomincia la simulazione</button></div>`, card => {
+    card.querySelector('[data-act=edit]').onclick = () => { closeModal(); simStop(); };
+    card.querySelector('[data-act=again]').onclick = () => { closeModal(); simRestart(); };
+  });
+}
+
+/* =========================================================================
+   Menu, finestre e avvisi
+   ========================================================================= */
+function popMenu(x, y, items, title, guard) {
+  hidePop();
+  const t0 = performance.now();
+  const veil = document.createElement('div'); veil.id = 'veil';
+  veil.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); hidePop(); });
+  const pop = document.createElement('div'); pop.id = 'pop'; pop.className = 'card'; pop.setAttribute('role', 'menu');
+  const hasChk = items.some(o => o.chk !== undefined);
+  let h = title ? `<div class="ttl">${esc(title)}</div>` : '';
+  items.forEach((it, i) => {
+    if (it.sep) { h += '<div class="hr"></div>'; return; }
+    h += `<button role="menuitem" data-i="${i}">${hasChk ? `<span class="chk">${it.chk ? '✓' : ''}</span>` : ''}<span><span>${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></button>`;
+  });
+  pop.innerHTML = h;
+  pop.addEventListener('click', e => {
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    if (guard && performance.now() - t0 < 350) return;
+    const it = items[+b.dataset.i]; hidePop(); if (it && it.act) it.act();
+  });
+  document.body.append(veil, pop);
+  const r = pop.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+  pop.style.left = clamp(x, 8, Math.max(8, W - r.width - 8)) + 'px';
+  pop.style.top = clamp(y + r.height > H - 8 ? y - r.height - 20 : y, 8, Math.max(8, H - r.height - 8)) + 'px';
+  const f = pop.querySelector('button'); if (f && !isTouch) f.focus();
+}
+function hidePop() { const p = $('#pop'), v = $('#veil'); if (p) p.remove(); if (v) v.remove(); }
+function openModal(html, setup) {
+  closeModal(); hidePop();
+  const m = document.createElement('div'); m.id = 'modal';
+  m.innerHTML = `<div class="card" role="dialog" aria-modal="true">${html}</div>`;
+  m.addEventListener('pointerdown', e => { if (e.target === m) closeModal(); });
+  m.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
+  document.body.appendChild(m);
+  const card = m.firstElementChild;
+  if (setup) setup(card);
+  if (!isTouch) { const f = card.querySelector('input, .pri, button'); if (f) f.focus(); }
+  return card;
+}
+function closeModal() { const m = $('#modal'); if (m) m.remove(); }
+function toast(msg, kind, ms) {
+  const box = $('#toasts'), t = document.createElement('div');
+  t.className = 'toast' + (kind ? ' ' + kind : ''); t.textContent = msg;
+  box.appendChild(t);
+  while (box.children.length > 4) box.firstElementChild.remove();
+  setTimeout(() => t.remove(), ms || (kind === 'err' || kind === 'trip' ? 6500 : 4000));
+}
+
+/* ---------- file ---------- */
+function docFileName() { return String(A.doc.title || 'schema').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) || 'schema'; }
+function docJSON() { return JSON.stringify({ app: 'QuadroSim', v: 1, title: A.doc.title, comps: A.doc.comps, wires: A.doc.wires }); }
+function saveFile() {
+  const name = docFileName() + '.json';
+  if (EMBED) {
+    if (!DL) { toast('Qui non si possono scaricare file: usa «Salvataggi su questo dispositivo».', 'err'); return; }
+    DL.save({ filename: name, data: docJSON() }).then(() => toast('File salvato: ' + name, 'ok'), e => {
+      if (e && e.code === 'declined') return;
+      if (e && e.code === 'rate_limited') { toast('Aspetta un attimo e riprova.'); return; }
+      toast('Il salvataggio del file non è disponibile qui: usa «Salvataggi su questo dispositivo».', 'err');
+    });
+    return;
+  }
+  const blob = new Blob([docJSON()], { type: 'application/json' });
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 3000);
+}
+function canShare() {
+  if (EMBED) return false;
+  try { return !!(navigator.canShare && navigator.canShare({ files: [new File(['{}'], 'x.json', { type: 'application/json' })] })); } catch (e) { return false; }
+}
+async function shareFile() {
+  try {
+    const f = new File([docJSON()], docFileName() + '.json', { type: 'application/json' });
+    await navigator.share({ files: [f], title: A.doc.title });
+  } catch (e) { if (!e || e.name !== 'AbortError') saveFile(); }
+}
+function openFile(f) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d || !Array.isArray(d.comps) || !Array.isArray(d.wires)) throw new Error('formato');
+      if (!d.title || d.title === 'Schema senza titolo') d.title = f.name.replace(/\.json$/i, '');
+      loadDoc(d, true);
+      toast('Aperto: ' + A.doc.title);
+    } catch (e) { toast('Questo file non è uno schema di QuadroSim.', 'err'); }
+  };
+  rd.readAsText(f);
+}
+function newSchema() {
+  const go = () => loadDoc(newDoc(), true);
+  if (!A.doc.comps.length && !A.doc.wires.length) { go(); return; }
+  openModal(`<h2>Nuovo schema</h2><p>Lo schema attuale verrà chiuso. Finché non chiudi la pagina puoi recuperarlo con il tasto Annulla; per conservarlo usa «Salva come file» o i salvataggi sul dispositivo.</p><div class="acts"><button class="btn" data-close>Annulla</button><button class="btn pri" data-act="go">Nuovo schema</button></div>`,
+    c => { c.querySelector('[data-act=go]').onclick = () => { closeModal(); go(); }; });
+}
+function fileMenu() {
+  const r = $('#b-file').getBoundingClientRect();
+  const items = [
+    { label: 'Nuovo schema', act: newSchema },
+    { label: 'Apri un file…', sub: 'schema .json salvato con QuadroSim', act: () => $('#fin').click() },
+  ];
+  if (!EMBED || DL) items.push({ label: 'Salva come file', sub: 'su iPad finisce in File, Download', act: saveFile });
+  if (canShare()) items.push({ label: 'Condividi il file…', sub: 'AirDrop, Mail, Classroom', act: shareFile });
+  items.push({ sep: true },
+    { label: 'Salvataggi su questo dispositivo…', act: archiveModal },
+    { label: 'Rinomina lo schema…', act: renameModal },
+    { sep: true },
+    { label: 'Controlla lo schema', sub: 'sigle mancanti e morsetti scollegati', act: checkModal });
+  if (!EMBED) items.push({ label: 'Stampa o salva in PDF', act: printDoc });
+  popMenu(r.left, r.bottom + 6, items, A.doc.title);
+}
+function archiveModal() {
+  const arch = store.get(LS_ARCH) || {};
+  const names = Object.keys(arch).sort((a, b) => (arch[b].t || 0) - (arch[a].t || 0));
+  const when = t => { try { return new Date(t).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { return ''; } };
+  const list = names.map((n, i) => `<div class="it"><div><b>${esc(n)}</b><small>${esc(when(arch[n].t))}, ${arch[n].doc && arch[n].doc.comps ? arch[n].doc.comps.length : 0} simboli</small></div><button class="btn" data-open="${i}">Apri</button><button class="btn" data-del="${i}">Elimina</button></div>`).join('');
+  openModal(`<h2>Salvataggi su questo dispositivo</h2><p>Restano nel browser di questo dispositivo. Per portare uno schema su un altro iPad usa «Salva come file» o «Condividi il file».</p>
+    <input type="text" id="ar-name" value="${esc(A.doc.title)}" aria-label="Nome del salvataggio">
+    <div class="acts" style="justify-content:flex-start;margin-top:8px"><button class="btn pri" data-act="save">Salva lo schema attuale</button></div>
+    <div class="lst">${list || '<p>Nessuno schema salvato finora.</p>'}</div>
+    <div class="acts"><button class="btn" data-close>Chiudi</button></div>`, card => {
+    card.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const a2 = store.get(LS_ARCH) || {};
+      if (b.dataset.act === 'save') {
+        const name = ($('#ar-name').value || '').trim().slice(0, 60) || 'Schema';
+        A.doc.title = name; commit();
+        a2[name] = { t: Date.now(), doc: JSON.parse(snapshot()) };
+        if (store.set(LS_ARCH, a2)) { toast('Salvato su questo dispositivo: ' + name, 'ok'); archiveModal(); }
+        else toast('Il browser non permette di salvare qui. Usa «Salva come file».', 'err');
+      } else if (b.dataset.open !== undefined) {
+        const n = names[+b.dataset.open], it = a2[n];
+        if (it) { closeModal(); loadDoc(Object.assign({}, it.doc, { title: n }), true); toast('Aperto: ' + n); }
+      } else if (b.dataset.del !== undefined) {
+        if (b.dataset.sure) { delete a2[names[+b.dataset.del]]; store.set(LS_ARCH, a2); archiveModal(); }
+        else { b.dataset.sure = '1'; b.textContent = 'Conferma'; b.classList.add('pri'); }
+      }
+    });
+  });
+}
+function renameModal() {
+  openModal(`<h2>Nome dello schema</h2><input type="text" id="rn" value="${esc(A.doc.title)}" aria-label="Nome dello schema"><div class="acts"><button class="btn" data-close>Annulla</button><button class="btn pri" data-act="ok">Rinomina</button></div>`, c => {
+    const ok = () => { const v = $('#rn').value.trim().slice(0, 80); if (v) { A.doc.title = v; commit(); } closeModal(); };
+    c.querySelector('[data-act=ok]').onclick = ok;
+    $('#rn').addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
+  });
+}
+function checkModal() {
+  const w = checkDoc(A.doc);
+  const body = w.length ? `<ul>${w.map(x => `<li>${esc(x.msg)}</li>`).join('')}</ul>` : '<p>Nessun problema: tutte le sigle sono a posto e tutti i morsetti sono collegati.</p>';
+  openModal(`<h2>Controllo dello schema</h2>${body}<div class="acts">${w.length ? '<button class="btn" data-act="sel">Seleziona gli elementi</button>' : ''}<button class="btn pri" data-close>Chiudi</button></div>`, c => {
+    const b = c.querySelector('[data-act=sel]');
+    if (b) b.onclick = () => {
+      const ids = new Set(); w.forEach(x => { if (x.id) ids.add(x.id); (x.ids || []).forEach(i => ids.add(i)); });
+      closeModal(); if (A.S) simStop(); A.sel = ids; setTool('sel'); render(); showProps();
+    };
+  });
+}
+function examplesModal() {
+  openModal(`<h2>Esempi</h2><p>L'esempio prende il posto dello schema attuale; con Annulla torni indietro.</p><div class="lst">${EXAMPLES.map((e, i) => `<button class="it" data-i="${i}"><span class="t"><b>${esc(e.name)}</b><small>${esc(e.desc)}</small></span></button>`).join('')}</div><div class="acts"><button class="btn" data-close>Chiudi</button></div>`, c => {
+    c.addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-i]'); if (!b) return;
+      closeModal();
+      const ex = EXAMPLES[+b.dataset.i];
+      loadDoc(ex.build(), true);
+    });
+  });
+}
+function helpModal() {
+  openModal(`<h2>Guida rapida</h2>
+    <h3>Disegnare</h3>
+    <p>Scegli un simbolo e tocca il foglio per posarlo, oppure trascinalo direttamente sul foglio. Tocca un simbolo per selezionarlo: nel riquadro cambi sigla e valori, lo ruoti, lo duplichi o lo elimini. Trascinalo per spostarlo: i fili collegati lo seguono. Tenendo premuto su un simbolo compare il menu rapido.</p>
+    <h3>Collegare</h3>
+    <p>Con lo strumento Filo trascina da un morsetto all'altro. In alternativa tocca il punto di partenza, gli angoli e l'arrivo: il filo si chiude da solo quando tocchi un morsetto o un altro filo. Il pallino nero è una giunzione; due fili che si incrociano senza pallino non sono collegati. I cerchietti arancioni sono morsetti ancora liberi. Un simbolo posato sopra un filo lo interrompe tra i suoi morsetti.</p>
+    <h3>Sigle</h3>
+    <p>Bobina e contatti con la stessa sigla (per esempio KM1) formano un unico apparecchio. I contatti temporizzati seguono il temporizzatore (KT1), i contatti 95-96 e 97-98 seguono il relè termico (FR1), un contatto con la sigla di un interruttore (Q1) ne segue lo stato. Comandi con la stessa sigla, come S1 NA e S1 NC, sono lo stesso pulsante.</p>
+    <h3>Simulare</h3>
+    <p>Gira l'interruttore giallo in alto a destra. Tieni premuti i pulsanti, tocca selettori, finecorsa e interruttori; tocca un fusibile interrotto per sostituirlo e un relè termico intervenuto per riarmarlo.</p>
+    <div class="legend"><span><i style="background:#D62839"></i>in tensione</span><span><i style="background:#1D63C8"></i>neutro o 0 V</span><span><i style="background:#23994A"></i>protezione PE</span><span><i style="background:#E0119A"></i>cortocircuito</span></div>
+    <p>I fili più spessi sono percorsi da corrente.</p>
+    <h3>Tester e guasti</h3>
+    <p>Con il Tester tocca due punti: leggi la tensione (V) oppure, a circuito non alimentato, la resistenza (Ω). Con Guasti tocchi un componente o un filo e scegli il difetto. «Guasto nascosto» ne inserisce uno a caso: trovalo con il tester e segnalalo con lo strumento Guasti.</p>
+    <h3>Gesti e salvataggio</h3>
+    <p>Con due dita sposti e ingrandisci il foglio. Lo schema resta salvato automaticamente su questo dispositivo; dal menu File lo salvi come file, lo condividi, lo apri o lo stampi in PDF.</p>
+    <p>Con la tastiera: <kbd>⌘Z</kbd> annulla, <kbd>R</kbd> ruota, <kbd>Canc</kbd> elimina, <kbd>W</kbd> filo, <kbd>Esc</kbd> interrompe.</p>
+    <div class="acts"><button class="btn pri" data-close>Ho capito</button></div>`);
+}
+function fillPrint() {
+  const doc = A.doc, b = docBounds(doc);
+  if (!b) { $('#print').innerHTML = ''; return false; }
+  const pad = 16, w = b[2] - b[0] + pad * 2, h = b[3] - b[1] + pad * 2;
+  const body = renderDoc(doc, { NL: buildNet(doc, null), hints: false });
+  let d = '';
+  try { d = new Date().toLocaleDateString('it-IT'); } catch (e) { /* niente */ }
+  $('#print').innerHTML = `<svg class="sch" xmlns="${SVGNS}" viewBox="${f2(b[0] - pad)} ${f2(b[1] - pad)} ${f2(w)} ${f2(h)}">${body}</svg><div class="foot"><span>${esc(doc.title)}</span><span>${esc(d)}</span></div>`;
+  return true;
+}
+function printDoc() {
+  if (EMBED) { toast('La stampa funziona aprendo QuadroSim come pagina web normale, per esempio da GitHub Pages.'); return; }
+  if (!fillPrint()) { toast('Il foglio è vuoto: non c\'è niente da stampare.'); return; }
+  setTimeout(() => { try { window.print(); } catch (e) { toast('La stampa non è disponibile qui: apri la pagina in Safari.', 'err'); } }, 80);
+}
+
+/* =========================================================================
+   Tastiera e avvio
+   ========================================================================= */
+document.addEventListener('keydown', e => {
+  const tgt = e.target;
+  if (tgt && tgt.closest && tgt.closest('input, textarea, select')) { if (e.key === 'Enter' && tgt.tagName === 'INPUT') tgt.blur(); return; }
+  if (e.key === 'Escape') {
+    if ($('#modal')) closeModal(); else if ($('#pop')) hidePop(); else if (A.chain) cancelChain(); else if (A.armed) armEntry(null);
+    else if (A.sel.size) { A.sel.clear(); render(); showProps(); }
+    return;
+  }
+  if ($('#modal')) return;
+  const mod = e.metaKey || e.ctrlKey, k = (e.key || '').toLowerCase();
+  if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if (mod && k === 'y') { e.preventDefault(); redo(); return; }
+  if (mod && k === 's') { e.preventDefault(); saveFile(); return; }
+  if (mod && k === 'd') { e.preventDefault(); duplicateSel(); return; }
+  if (mod && k === 'p') { e.preventDefault(); printDoc(); return; }
+  if (mod || A.S) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSel(); }
+  else if (k === 'r') rotateSel();
+  else if (k === 'w') setTool('wire');
+  else if (k === 'v') setTool('sel');
+  else if (k === 'a') setTool('area');
+  else if (e.key === 'Enter' && A.chain) endChain();
+});
+
+function init() {
+  buildPalette();
+  $$('#tools button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+  $$('#simtools button').forEach(b => b.addEventListener('click', () => setSimTool(b.dataset.st)));
+  $('#b-undo').onclick = undo; $('#b-redo').onclick = redo;
+  $('#b-file').onclick = fileMenu; $('#b-ex').onclick = examplesModal; $('#b-help').onclick = helpModal;
+  $('#e-ex').onclick = examplesModal; $('#e-help').onclick = helpModal;
+  $('#b-zin').onclick = () => zoomCenter(1.25); $('#b-zout').onclick = () => zoomCenter(0.8); $('#b-fit').onclick = fitView;
+  $('#mainsw').onclick = () => (A.S ? simStop() : simStart());
+  $('#b-hidden').onclick = hiddenClick; $('#b-log').onclick = showLog; $('#b-reset').onclick = simRestart;
+  $('#m-v').onclick = () => setMMode('V'); $('#m-o').onclick = () => setMMode('R');
+  $('#m-x').onclick = () => { A.probes = { r: null, b: null }; A.mKey = ''; renderOverlay(); updMeter(); };
+  $('#wb-end').onclick = endChain; $('#wb-back').onclick = backChain; $('#wb-cancel').onclick = cancelChain;
+  $('#palbtn').onclick = () => document.body.classList.toggle('palopen');
+  $('#palclose').onclick = () => document.body.classList.remove('palopen');
+  $('#props').addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const a = b.dataset.a;
+    if (a === 'close') { A.sel.clear(); render(); showProps(); } else if (a === 'rot') rotateSel(); else if (a === 'dup') duplicateSel(); else if (a === 'del') deleteSel();
+  });
+  $('#props').addEventListener('change', e => propChange(e.target));
+  $('#fin').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) openFile(f); });
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  window.addEventListener('resize', () => renderOverlay());
+  window.addEventListener('beforeprint', fillPrint);
+
+  if (EMBED) document.body.classList.add('embed');
+  const saved = store.get(LS_AUTO);
+  A.doc = saved && Array.isArray(saved.comps) ? normDoc(saved) : normDoc(EXAMPLES[0].build());
+  A.saved = snapshot(); updUndo();
+  applyView(); render(); hint();
+  requestAnimationFrame(fitView);
+}
+init();
+
+</script>
+</body>
+</html>
